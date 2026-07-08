@@ -41,13 +41,19 @@ export class TextHandler implements IHandler {
         inputSchema: {
           pageIndex: z.number().int().min(0),
           frameIndex: z.number().int().min(0),
+          includeControlChars: z.boolean().optional().default(false).describe('Include BOM (\\ufeff) and control chars (\\u0004) in output'),
+          timeout: z.number().int().min(1000).max(300000).optional().describe('Custom timeout in ms'),
         },
         handler: compose(withLogging('text_getContent'), withErrorHandling())(this.getContent.bind(this)),
       },
       {
         name: 'text_getStories',
-        description: 'List all stories in the active document',
-        inputSchema: {},
+        description: 'List all stories in the active document with optional timeout and max results',
+        inputSchema: {
+          maxResults: z.number().int().min(1).max(5000).optional().default(500).describe('Maximum number of stories to return'),
+          timeout: z.number().int().min(1000).max(300000).optional().describe('Custom timeout in ms for large documents'),
+          includeControlChars: z.boolean().optional().default(false).describe('Include BOM and control characters in content preview'),
+        },
         handler: compose(withLogging('text_getStories'), withErrorHandling())(this.getStories.bind(this)),
       },
       {
@@ -73,8 +79,12 @@ export class TextHandler implements IHandler {
       },
       {
         name: 'text_getTextFrames',
-        description: 'List all text frames on a page',
-        inputSchema: { pageIndex: z.number().int().min(0) },
+        description: 'List all text frames on a page with optional timeout',
+        inputSchema: {
+          pageIndex: z.number().int().min(0),
+          timeout: z.number().int().min(1000).max(300000).optional().describe('Custom timeout in ms for large documents'),
+          includeControlChars: z.boolean().optional().default(false).describe('Include BOM and control characters in content preview'),
+        },
         handler: compose(withLogging('text_getTextFrames'), withErrorHandling())(this.getTextFrames.bind(this)),
       },
     ];
@@ -125,27 +135,44 @@ export class TextHandler implements IHandler {
     const params = z.object({
       pageIndex: z.number().int().min(0),
       frameIndex: z.number().int().min(0),
+      includeControlChars: z.boolean().optional().default(false),
+      timeout: z.number().int().min(1000).max(300000).optional(),
     }).parse(args as Record<string, unknown>);
-    const code = `app.activeDocument.pages[${params.pageIndex}].textFrames[${params.frameIndex}].contents`;
-    const response = await this.executor.execute(code);
+
+    const code = params.includeControlChars
+      ? `app.activeDocument.pages[${params.pageIndex}].textFrames[${params.frameIndex}].contents`
+      : `app.activeDocument.pages[${params.pageIndex}].textFrames[${params.frameIndex}].contents.replace(/[\\ufeff\\u0004]/g, '')`;
+
+    const response = await this.executor.execute(code, params.timeout);
     return formatResponse(response.result);
   }
 
-  private async getStories(_args: unknown, _extra: any): Promise<ToolResult> {
+  private async getStories(args: unknown, _extra: any): Promise<ToolResult> {
+    const params = z.object({
+      maxResults: z.number().int().min(1).max(5000).optional().default(500),
+      timeout: z.number().int().min(1000).max(300000).optional(),
+      includeControlChars: z.boolean().optional().default(false),
+    }).parse(args as Record<string, unknown>);
+
+    const filterExpr = params.includeControlChars
+      ? 'stories[i].contents.substring(0, 200)'
+      : "stories[i].contents.replace(/[\\ufeff\\u0004]/g, '').substring(0, 200)";
+
     const code = `
       var stories = app.activeDocument.stories;
       var result = [];
-      for (var i = 0; i < stories.length; i++) {
+      var limit = Math.min(stories.length, ${params.maxResults});
+      for (var i = 0; i < limit; i++) {
         result.push({
           index: i,
           length: stories[i].length,
           textFrames: stories[i].textContainers.length,
-          contents: stories[i].contents.substring(0, 200)
+          contents: ${filterExpr}
         });
       }
       JSON.stringify(result);
     `;
-    const response = await this.executor.execute(code);
+    const response = await this.executor.execute(code, params.timeout);
     return formatResponse(response.result);
   }
 
@@ -187,7 +214,16 @@ export class TextHandler implements IHandler {
   }
 
   private async getTextFrames(args: unknown, _extra: any): Promise<ToolResult> {
-    const params = z.object({ pageIndex: z.number().int().min(0) }).parse(args as Record<string, unknown>);
+    const params = z.object({
+      pageIndex: z.number().int().min(0),
+      timeout: z.number().int().min(1000).max(300000).optional(),
+      includeControlChars: z.boolean().optional().default(false),
+    }).parse(args as Record<string, unknown>);
+
+    const filterExpr = params.includeControlChars
+      ? 'tfs[i].contents.substring(0, 100)'
+      : "tfs[i].contents.replace(/[\\ufeff\\u0004]/g, '').substring(0, 100)";
+
     const code = `
       var tfs = app.activeDocument.pages[${params.pageIndex}].textFrames;
       var result = [];
@@ -197,12 +233,12 @@ export class TextHandler implements IHandler {
           bounds: tfs[i].geometricBounds,
           contentType: tfs[i].contentType,
           overflows: tfs[i].overflows,
-          contentPreview: tfs[i].contents.substring(0, 100)
+          contentPreview: ${filterExpr}
         });
       }
       JSON.stringify(result);
     `;
-    const response = await this.executor.execute(code);
+    const response = await this.executor.execute(code, params.timeout);
     return formatResponse(response.result);
   }
 }

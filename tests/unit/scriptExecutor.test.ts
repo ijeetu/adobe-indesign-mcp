@@ -21,7 +21,9 @@ describe('ScriptExecutor', () => {
 
     expect(onRequest).toHaveBeenCalledTimes(1);
     const req = onRequest.mock.calls[0][0];
-    expect(req).toMatchObject({ code: 'app.documents.add();', timeout: 5000 });
+    // Code is wrapped with JSON_POLYFILL + EXTENDSCRIPT_HELPERS, so check it contains the original
+    expect(req.code).toContain('app.documents.add();');
+    expect(req.timeout).toBe(5000);
     expect(typeof req.id).toBe('string');
     expect(req.id.length).toBeGreaterThan(0);
 

@@ -17,6 +17,8 @@ export function sanitizeCode(code: string): string {
     /\bexec\(/g,
     /\bspawn\(/g,
     /\bfork\(/g,
+    /\beval\s*\(/g,
+    /\bFunction\s*\(/g,
   ];
 
   let sanitized = code;

@@ -1,16 +1,21 @@
+import { z } from 'zod';
 import type { IHandler, ToolDefinition, ToolResult } from '../types/index.js';
 import { createDocumentSchema, openDocumentSchema, saveDocumentSchema, closeDocumentSchema } from '../schemas/index.js';
 import { formatResponse } from '../utils/errorHandler.js';
 import { withLogging, withErrorHandling, compose } from '../utils/middleware.js';
 import type { ScriptExecutor } from '../bridge/ScriptExecutor.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { SessionManager } from '../core/SessionManager.js';
 
 export class DocumentHandler implements IHandler {
   public readonly name = 'document';
   private executor: ScriptExecutor;
+  private sessionManager: SessionManager;
+  private sessionId: string = 'default';
 
-  constructor(executor: ScriptExecutor) {
+  constructor(executor: ScriptExecutor, sessionManager?: SessionManager) {
     this.executor = executor;
+    this.sessionManager = sessionManager ?? new SessionManager();
   }
 
   public get tools(): ToolDefinition[] {
@@ -51,6 +56,22 @@ export class DocumentHandler implements IHandler {
         inputSchema: {},
         handler: compose(withLogging('document_listOpen'), withErrorHandling())(this.listOpen.bind(this)),
       },
+      {
+        name: 'document_getPageStories',
+        description: 'Get all stories that appear on a specific page',
+        inputSchema: {
+          pageIndex: z.number().int().min(0),
+        },
+        handler: compose(withLogging('document_getPageStories'), withErrorHandling())(this.getPageStories.bind(this)),
+      },
+      {
+        name: 'document_getStoryPages',
+        description: 'Get all pages covered by a specific story (for finding which pages a story lives on)',
+        inputSchema: {
+          storyIndex: z.number().int().min(0),
+        },
+        handler: compose(withLogging('document_getStoryPages'), withErrorHandling())(this.getStoryPages.bind(this)),
+      },
     ];
   }
 
@@ -58,6 +79,15 @@ export class DocumentHandler implements IHandler {
     for (const tool of this.tools) {
       server.tool(tool.name, tool.description, tool.inputSchema, tool.handler);
     }
+  }
+
+  private trackDocInfo(result: unknown): void {
+    try {
+      const parsed = typeof result === 'string' ? JSON.parse(result) : result;
+      if (parsed && parsed.name) {
+        this.sessionManager.setActiveDoc(this.sessionId, parsed);
+      }
+    } catch { /* ignore parse errors, session tracking is best-effort */ }
   }
 
   private async create(args: unknown, _extra: any): Promise<ToolResult> {
@@ -93,6 +123,7 @@ export class DocumentHandler implements IHandler {
       });
     `;
     const response = await this.executor.execute(code);
+    this.trackDocInfo(response.result);
     return formatResponse(response.result);
   }
 
@@ -108,6 +139,7 @@ export class DocumentHandler implements IHandler {
       });
     `;
     const response = await this.executor.execute(code);
+    this.trackDocInfo(response.result);
     return formatResponse(response.result);
   }
 
@@ -148,6 +180,7 @@ export class DocumentHandler implements IHandler {
       });
     `;
     const response = await this.executor.execute(code);
+    this.trackDocInfo(response.result);
     return formatResponse(response.result);
   }
 
@@ -163,6 +196,65 @@ export class DocumentHandler implements IHandler {
           pages: docs[i].pages.length,
           filePath: fp
         });
+      }
+      JSON.stringify(result);
+    `;
+    const response = await this.executor.execute(code);
+    return formatResponse(response.result);
+  }
+
+  private async getPageStories(args: unknown, _extra: any): Promise<ToolResult> {
+    const params = z.object({ pageIndex: z.number().int().min(0) }).parse(args as Record<string, unknown>);
+
+    const code = `
+      var doc = app.activeDocument;
+      var page = doc.pages[${params.pageIndex}];
+      var allStories = doc.stories;
+      var result = [];
+      for (var si = 0; si < allStories.length; si++) {
+        var story = allStories[si];
+        var frameIndices = [];
+        for (var ti = 0; ti < story.textContainers.length; ti++) {
+          var tc = story.textContainers[ti];
+          try {
+            var tfPage = tc.parentPage;
+            if (tfPage && tfPage.index === ${params.pageIndex}) {
+              frameIndices.push(ti);
+            }
+          } catch(e) {}
+        }
+        if (frameIndices.length > 0) {
+          result.push({
+            storyIndex: si,
+            length: story.length,
+            textFrames: story.textContainers.length,
+            textFrameIndices: frameIndices,
+            contentPreview: story.contents.replace(/[\\ufeff\\u0004]/g, '').substring(0, 200)
+          });
+        }
+      }
+      JSON.stringify(result);
+    `;
+    const response = await this.executor.execute(code);
+    return formatResponse(response.result);
+  }
+
+  private async getStoryPages(args: unknown, _extra: any): Promise<ToolResult> {
+    const params = z.object({ storyIndex: z.number().int().min(0) }).parse(args as Record<string, unknown>);
+
+    const code = `
+      var story = app.activeDocument.stories[${params.storyIndex}];
+      var result = [];
+      var seen = {};
+      for (var ti = 0; ti < story.textContainers.length; ti++) {
+        var tc = story.textContainers[ti];
+        try {
+          var pg = tc.parentPage;
+          if (pg && !seen[pg.index]) {
+            seen[pg.index] = true;
+            result.push({ pageIndex: pg.index, pageName: pg.name });
+          }
+        } catch(e) {}
       }
       JSON.stringify(result);
     `;

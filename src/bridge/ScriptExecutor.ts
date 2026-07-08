@@ -4,22 +4,58 @@ import type { BridgeRequest, BridgeResponse, BridgeStatus } from '../types/index
 import { InDesignError } from '../utils/errorHandler.js';
 import { sanitizeCode } from '../utils/stringUtils.js';
 import { JSON_POLYFILL } from './jsonPolyfill.js';
+import { getExtendScriptHelpers } from './extendScriptHelpers.js';
 
 export class ScriptExecutor extends EventEmitter {
   private pending: Map<string, { resolve: (res: BridgeResponse) => void; reject: (err: Error) => void; timer: NodeJS.Timeout }> = new Map();
   private defaultTimeout: number;
+  private _undoGroupActive: boolean = false;
 
   constructor(defaultTimeout: number = 30000) {
     super();
     this.defaultTimeout = defaultTimeout;
   }
 
+  get undoGroupActive(): boolean {
+    return this._undoGroupActive;
+  }
+
+  startUndoGroup(): void {
+    this._undoGroupActive = true;
+  }
+
+  endUndoGroup(): void {
+    this._undoGroupActive = false;
+  }
+
   async execute(
     code: string,
     timeout?: number,
+    debug?: boolean,
   ): Promise<BridgeResponse> {
-    const polyfilled = JSON_POLYFILL + '\n' + code;
-    const sanitized = sanitizeCode(polyfilled);
+    const helpers = getExtendScriptHelpers();
+    const polyfilled = JSON_POLYFILL + '\n' + helpers;
+
+    let wrapped = code;
+
+    if (debug) {
+      wrapped = `
+try {
+  ${code}
+} catch(e) {
+  JSON.stringify({ __extendscript_error: true, message: e.message, line: e.line, fileName: e.fileName, stack: e.stack });
+}`;
+    }
+
+    if (this._undoGroupActive) {
+      wrapped = `
+app.scriptPreferences.undoMode = UndoModes.ENTIRE_SCRIPT;
+${wrapped}
+app.scriptPreferences.undoMode = UndoModes.FAST_ENTIRE_SCRIPT;`;
+    }
+
+    const fullCode = polyfilled + '\n' + wrapped;
+    const sanitized = sanitizeCode(fullCode);
     const id = uuidv4();
     const request: BridgeRequest = {
       id,

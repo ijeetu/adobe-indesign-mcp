@@ -188,3 +188,41 @@ export interface EffectInfo {
   applied: boolean;
   settings: Record<string, unknown>;
 }
+
+// ── Text formatting / search domain interfaces ──
+
+export interface FormattingRange {
+  start: number;
+  end: number;
+  font: string;
+  fontStyle: string;
+  pointSize: number;
+  characterStyle: string;
+  fillColor: string;
+  capitalization: string;
+  tracking: number;
+  baselineShift: number;
+  horizontalScale: number;
+  verticalScale: number;
+}
+
+export interface TextMatch {
+  paragraphIndex: number;
+  charStart: number;
+  charEnd: number;
+  text: string;
+  storyIndex?: number;
+}
+
+export interface StoryOnPage {
+  storyIndex: number;
+  length: number;
+  textFrames: number;
+  contentPreview: string;
+  textFrameIndices: number[];
+}
+
+export interface PageRef {
+  pageIndex: number;
+  pageName: string;
+}

@@ -32,6 +32,18 @@ export class UndoHandler implements IHandler {
         inputSchema: {},
         handler: compose(withLogging('undo_history'), withErrorHandling())(this.undoHistory.bind(this)),
       },
+      {
+        name: 'undo_beginGroup',
+        description: 'Begin an undo group — subsequent tool calls become a single undo step. Call undo_endGroup() to restore normal behavior.',
+        inputSchema: {},
+        handler: compose(withLogging('undo_beginGroup'), withErrorHandling())(this.beginUndoGroup.bind(this)),
+      },
+      {
+        name: 'undo_endGroup',
+        description: 'End the undo group and restore normal undo behavior',
+        inputSchema: {},
+        handler: compose(withLogging('undo_endGroup'), withErrorHandling())(this.endUndoGroup.bind(this)),
+      },
     ];
   }
 
@@ -72,5 +84,15 @@ export class UndoHandler implements IHandler {
     `;
     const response = await this.executor.execute(code);
     return formatResponse(response.result);
+  }
+
+  private async beginUndoGroup(_args: unknown, _extra: any): Promise<ToolResult> {
+    this.executor.startUndoGroup();
+    return formatResponse({ undoGroupActive: true });
+  }
+
+  private async endUndoGroup(_args: unknown, _extra: any): Promise<ToolResult> {
+    this.executor.endUndoGroup();
+    return formatResponse({ undoGroupActive: false });
   }
 }

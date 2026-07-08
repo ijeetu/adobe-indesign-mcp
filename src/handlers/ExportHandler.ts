@@ -64,6 +64,16 @@ export class ExportHandler implements IHandler {
         inputSchema: { code: z.string().min(1).max(50000) },
         handler: compose(withLogging('export_executeScript'), withErrorHandling())(this.executeCode.bind(this)),
       },
+      {
+        name: 'script_run',
+        description: 'Execute arbitrary ExtendScript code with optional debug mode that returns line-level error stack traces',
+        inputSchema: {
+          code: z.string().min(1).max(100000),
+          debug: z.boolean().optional().default(false).describe('Enable debug mode: wraps code in try/catch and returns ExtendScript error stack'),
+          timeout: z.number().int().min(1000).max(300000).optional().describe('Custom timeout in ms'),
+        },
+        handler: compose(withLogging('script_run'), withErrorHandling())(this.scriptRun.bind(this)),
+      },
     ];
   }
 
@@ -200,6 +210,16 @@ export class ExportHandler implements IHandler {
   private async executeCode(args: unknown, _extra: any): Promise<ToolResult> {
     const params = z.object({ code: z.string().min(1).max(50000) }).parse(args as Record<string, unknown>);
     const response = await this.executor.execute(params.code);
+    return formatResponse(response.result ?? '(no return value)');
+  }
+
+  private async scriptRun(args: unknown, _extra: any): Promise<ToolResult> {
+    const params = z.object({
+      code: z.string().min(1).max(100000),
+      debug: z.boolean().optional().default(false),
+      timeout: z.number().int().min(1000).max(300000).optional(),
+    }).parse(args as Record<string, unknown>);
+    const response = await this.executor.execute(params.code, params.timeout, params.debug);
     return formatResponse(response.result ?? '(no return value)');
   }
 }

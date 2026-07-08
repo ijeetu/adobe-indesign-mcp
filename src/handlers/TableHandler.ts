@@ -93,6 +93,113 @@ export class TableHandler implements IHandler {
         },
         handler: compose(withLogging('table_getInfo'), withErrorHandling())(this.getInfo.bind(this)),
       },
+      {
+        name: 'table_mergeCells',
+        description: 'Merge a range of cells into one',
+        inputSchema: {
+          pageIndex: z.number().int().min(0),
+          tableIndex: z.number().int().min(0),
+          startRow: z.number().int().min(0),
+          startColumn: z.number().int().min(0),
+          endRow: z.number().int().min(0),
+          endColumn: z.number().int().min(0),
+        },
+        handler: compose(withLogging('table_mergeCells'), withErrorHandling())(this.mergeCells.bind(this)),
+      },
+      {
+        name: 'table_splitCell',
+        description: 'Split a merged cell',
+        inputSchema: {
+          pageIndex: z.number().int().min(0),
+          tableIndex: z.number().int().min(0),
+          rowIndex: z.number().int().min(0),
+          columnIndex: z.number().int().min(0),
+          horizontal: z.boolean().default(true),
+          vertical: z.boolean().default(true),
+        },
+        handler: compose(withLogging('table_splitCell'), withErrorHandling())(this.splitCell.bind(this)),
+      },
+      {
+        name: 'table_setCellFill',
+        description: "Set a cell's fill color and tint",
+        inputSchema: {
+          pageIndex: z.number().int().min(0),
+          tableIndex: z.number().int().min(0),
+          rowIndex: z.number().int().min(0),
+          columnIndex: z.number().int().min(0),
+          fillColor: z.string(),
+          tintPercent: z.number().min(0).max(100).optional(),
+        },
+        handler: compose(withLogging('table_setCellFill'), withErrorHandling())(this.setCellFill.bind(this)),
+      },
+      {
+        name: 'table_setCellStroke',
+        description: 'Set cell edge stroke properties',
+        inputSchema: {
+          pageIndex: z.number().int().min(0),
+          tableIndex: z.number().int().min(0),
+          rowIndex: z.number().int().min(0),
+          columnIndex: z.number().int().min(0),
+          edge: z.enum(['top', 'bottom', 'left', 'right', 'all']),
+          strokeWeight: z.number().min(0),
+          strokeColor: z.string().optional(),
+          strokeType: z.string().optional(),
+        },
+        handler: compose(withLogging('table_setCellStroke'), withErrorHandling())(this.setCellStroke.bind(this)),
+      },
+      {
+        name: 'table_setCellInset',
+        description: 'Set cell inset spacing',
+        inputSchema: {
+          pageIndex: z.number().int().min(0),
+          tableIndex: z.number().int().min(0),
+          rowIndex: z.number().int().min(0),
+          columnIndex: z.number().int().min(0),
+          top: z.number().min(0),
+          bottom: z.number().min(0),
+          left: z.number().min(0),
+          right: z.number().min(0),
+        },
+        handler: compose(withLogging('table_setCellInset'), withErrorHandling())(this.setCellInset.bind(this)),
+      },
+      {
+        name: 'table_setCellAlignment',
+        description: 'Set cell text alignment',
+        inputSchema: {
+          pageIndex: z.number().int().min(0),
+          tableIndex: z.number().int().min(0),
+          rowIndex: z.number().int().min(0),
+          columnIndex: z.number().int().min(0),
+          horizontalAlignment: z.enum(['left', 'center', 'right', 'justify']).optional(),
+          verticalAlignment: z.enum(['top', 'center', 'bottom', 'justify']).optional(),
+        },
+        handler: compose(withLogging('table_setCellAlignment'), withErrorHandling())(this.setCellAlignment.bind(this)),
+      },
+      {
+        name: 'table_setHeaderFooter',
+        description: 'Set header and footer row counts',
+        inputSchema: {
+          pageIndex: z.number().int().min(0),
+          tableIndex: z.number().int().min(0),
+          headerRows: z.number().int().min(0).default(0),
+          footerRows: z.number().int().min(0).default(0),
+          repeatHeader: z.boolean().default(true),
+        },
+        handler: compose(withLogging('table_setHeaderFooter'), withErrorHandling())(this.setHeaderFooter.bind(this)),
+      },
+      {
+        name: 'table_setRowColumnSize',
+        description: 'Set row height or column width',
+        inputSchema: {
+          pageIndex: z.number().int().min(0),
+          tableIndex: z.number().int().min(0),
+          type: z.enum(['row', 'column']),
+          index: z.number().int().min(0),
+          size: z.number().min(0),
+          units: z.enum(['points', 'mm', 'inches']).optional().default('points'),
+        },
+        handler: compose(withLogging('table_setRowColumnSize'), withErrorHandling())(this.setRowColumnSize.bind(this)),
+      },
     ];
   }
 
@@ -246,6 +353,210 @@ export class TableHandler implements IHandler {
         }
       }
       JSON.stringify(result);
+    `;
+    const response = await this.executor.execute(code);
+    return formatResponse(response.result);
+  }
+
+  private async mergeCells(args: unknown, _extra: any): Promise<ToolResult> {
+    const params = z.object({
+      pageIndex: z.number().int().min(0),
+      tableIndex: z.number().int().min(0),
+      startRow: z.number().int().min(0),
+      startColumn: z.number().int().min(0),
+      endRow: z.number().int().min(0),
+      endColumn: z.number().int().min(0),
+    }).parse(args as Record<string, unknown>);
+    const code = `
+      var table = ${this.scope(params.pageIndex)}.tables[${params.tableIndex}];
+      if (!table.isValid) { throw new Error("Table not found"); }
+      table.rows[${params.startRow}].cells[${params.startColumn}].merge(table.rows[${params.endRow}].cells[${params.endColumn}]);
+      JSON.stringify({ merged: true, startRow: ${params.startRow}, startColumn: ${params.startColumn}, endRow: ${params.endRow}, endColumn: ${params.endColumn} });
+    `;
+    const response = await this.executor.execute(code);
+    return formatResponse(response.result);
+  }
+
+  private async splitCell(args: unknown, _extra: any): Promise<ToolResult> {
+    const params = z.object({
+      pageIndex: z.number().int().min(0),
+      tableIndex: z.number().int().min(0),
+      rowIndex: z.number().int().min(0),
+      columnIndex: z.number().int().min(0),
+      horizontal: z.boolean().default(true),
+      vertical: z.boolean().default(true),
+    }).parse(args as Record<string, unknown>);
+    const code = `
+      var table = ${this.scope(params.pageIndex)}.tables[${params.tableIndex}];
+      if (!table.isValid) { throw new Error("Table not found"); }
+      table.rows[${params.rowIndex}].cells[${params.columnIndex}].split(${params.horizontal}, ${params.vertical});
+      JSON.stringify({ split: true, rowIndex: ${params.rowIndex}, columnIndex: ${params.columnIndex} });
+    `;
+    const response = await this.executor.execute(code);
+    return formatResponse(response.result);
+  }
+
+  private async setCellFill(args: unknown, _extra: any): Promise<ToolResult> {
+    const params = z.object({
+      pageIndex: z.number().int().min(0),
+      tableIndex: z.number().int().min(0),
+      rowIndex: z.number().int().min(0),
+      columnIndex: z.number().int().min(0),
+      fillColor: z.string(),
+      tintPercent: z.number().min(0).max(100).optional(),
+    }).parse(args as Record<string, unknown>);
+    const escColor = this.escape(params.fillColor);
+    const tintLine = params.tintPercent !== undefined
+      ? `\n      cell.fillTint = ${params.tintPercent};`
+      : '';
+    const tintVal = params.tintPercent !== undefined ? params.tintPercent : 'null';
+    const code = `
+      var table = ${this.scope(params.pageIndex)}.tables[${params.tableIndex}];
+      if (!table.isValid) { throw new Error("Table not found"); }
+      var cell = table.rows[${params.rowIndex}].cells[${params.columnIndex}];
+      cell.fillColor = app.activeDocument.colors.item("${escColor}");${tintLine}
+      JSON.stringify({ fillColor: "${escColor}", tint: ${tintVal} });
+    `;
+    const response = await this.executor.execute(code);
+    return formatResponse(response.result);
+  }
+
+  private async setCellStroke(args: unknown, _extra: any): Promise<ToolResult> {
+    const params = z.object({
+      pageIndex: z.number().int().min(0),
+      tableIndex: z.number().int().min(0),
+      rowIndex: z.number().int().min(0),
+      columnIndex: z.number().int().min(0),
+      edge: z.enum(['top', 'bottom', 'left', 'right', 'all']),
+      strokeWeight: z.number().min(0),
+      strokeColor: z.string().optional(),
+      strokeType: z.string().optional(),
+    }).parse(args as Record<string, unknown>);
+    const edges = params.edge === 'all' ? ['top', 'bottom', 'left', 'right'] : [params.edge];
+    const escColor = params.strokeColor ? this.escape(params.strokeColor) : '';
+    const escStrokeType = params.strokeType ? this.escape(params.strokeType) : '';
+    let assignments = '';
+    for (const e of edges) {
+      assignments += `\n      cell.${e}EdgeStrokeWeight = ${params.strokeWeight};`;
+      if (params.strokeColor) {
+        assignments += `\n      cell.${e}EdgeStrokeColor = app.activeDocument.colors.item("${escColor}");`;
+      }
+      if (params.strokeType) {
+        assignments += `\n      cell.${e}EdgeStrokeType = app.activeDocument.strokeStyles.item("${escStrokeType}");`;
+      }
+    }
+    const code = `
+      var table = ${this.scope(params.pageIndex)}.tables[${params.tableIndex}];
+      if (!table.isValid) { throw new Error("Table not found"); }
+      var cell = table.rows[${params.rowIndex}].cells[${params.columnIndex}];${assignments}
+      JSON.stringify({ edge: "${params.edge}", strokeWeight: ${params.strokeWeight} });
+    `;
+    const response = await this.executor.execute(code);
+    return formatResponse(response.result);
+  }
+
+  private async setCellInset(args: unknown, _extra: any): Promise<ToolResult> {
+    const params = z.object({
+      pageIndex: z.number().int().min(0),
+      tableIndex: z.number().int().min(0),
+      rowIndex: z.number().int().min(0),
+      columnIndex: z.number().int().min(0),
+      top: z.number().min(0),
+      bottom: z.number().min(0),
+      left: z.number().min(0),
+      right: z.number().min(0),
+    }).parse(args as Record<string, unknown>);
+    const code = `
+      var table = ${this.scope(params.pageIndex)}.tables[${params.tableIndex}];
+      if (!table.isValid) { throw new Error("Table not found"); }
+      var cell = table.rows[${params.rowIndex}].cells[${params.columnIndex}];
+      cell.topInset = ${params.top};
+      cell.bottomInset = ${params.bottom};
+      cell.leftInset = ${params.left};
+      cell.rightInset = ${params.right};
+      JSON.stringify({ top: ${params.top}, bottom: ${params.bottom}, left: ${params.left}, right: ${params.right} });
+    `;
+    const response = await this.executor.execute(code);
+    return formatResponse(response.result);
+  }
+
+  private async setCellAlignment(args: unknown, _extra: any): Promise<ToolResult> {
+    const params = z.object({
+      pageIndex: z.number().int().min(0),
+      tableIndex: z.number().int().min(0),
+      rowIndex: z.number().int().min(0),
+      columnIndex: z.number().int().min(0),
+      horizontalAlignment: z.enum(['left', 'center', 'right', 'justify']).optional(),
+      verticalAlignment: z.enum(['top', 'center', 'bottom', 'justify']).optional(),
+    }).parse(args as Record<string, unknown>);
+    const hAlignMap: Record<string, string> = {
+      left: 'Justification.LEFT_ALIGN',
+      center: 'Justification.CENTER_ALIGN',
+      right: 'Justification.RIGHT_ALIGN',
+      justify: 'Justification.JUSTIFY_ALIGN',
+    };
+    const vAlignMap: Record<string, string> = {
+      top: 'VerticalJustification.TOP_ALIGN',
+      center: 'VerticalJustification.CENTER_ALIGN',
+      bottom: 'VerticalJustification.BOTTOM_ALIGN',
+      justify: 'VerticalJustification.JUSTIFY_ALIGN',
+    };
+    let setup = '';
+    if (params.horizontalAlignment) {
+      setup += `\n      cell.paragraphs[0].justification = ${hAlignMap[params.horizontalAlignment]};`;
+    }
+    if (params.verticalAlignment) {
+      setup += `\n      cell.verticalJustification = ${vAlignMap[params.verticalAlignment]};`;
+    }
+    const code = `
+      var table = ${this.scope(params.pageIndex)}.tables[${params.tableIndex}];
+      if (!table.isValid) { throw new Error("Table not found"); }
+      var cell = table.rows[${params.rowIndex}].cells[${params.columnIndex}];${setup}
+      JSON.stringify({ horizontalAlignment: "${params.horizontalAlignment || ''}", verticalAlignment: "${params.verticalAlignment || ''}" });
+    `;
+    const response = await this.executor.execute(code);
+    return formatResponse(response.result);
+  }
+
+  private async setHeaderFooter(args: unknown, _extra: any): Promise<ToolResult> {
+    const params = z.object({
+      pageIndex: z.number().int().min(0),
+      tableIndex: z.number().int().min(0),
+      headerRows: z.number().int().min(0).default(0),
+      footerRows: z.number().int().min(0).default(0),
+      repeatHeader: z.boolean().default(true),
+    }).parse(args as Record<string, unknown>);
+    const code = `
+      var table = ${this.scope(params.pageIndex)}.tables[${params.tableIndex}];
+      if (!table.isValid) { throw new Error("Table not found"); }
+      table.headerRowCount = ${params.headerRows};
+      table.footerRowCount = ${params.footerRows};
+      JSON.stringify({ headerRows: ${params.headerRows}, footerRows: ${params.footerRows}, repeatHeader: ${params.repeatHeader} });
+    `;
+    const response = await this.executor.execute(code);
+    return formatResponse(response.result);
+  }
+
+  private async setRowColumnSize(args: unknown, _extra: any): Promise<ToolResult> {
+    const params = z.object({
+      pageIndex: z.number().int().min(0),
+      tableIndex: z.number().int().min(0),
+      type: z.enum(['row', 'column']),
+      index: z.number().int().min(0),
+      size: z.number().min(0),
+      units: z.enum(['points', 'mm', 'inches']).optional().default('points'),
+    }).parse(args as Record<string, unknown>);
+    const sizeInPoints = params.units === 'mm'
+      ? params.size * 2.83465
+      : params.units === 'inches'
+        ? params.size * 72
+        : params.size;
+    const prop = params.type === 'row' ? 'height' : 'width';
+    const code = `
+      var table = ${this.scope(params.pageIndex)}.tables[${params.tableIndex}];
+      if (!table.isValid) { throw new Error("Table not found"); }
+      table.${params.type}s[${params.index}].${prop} = ${sizeInPoints};
+      JSON.stringify({ type: "${params.type}", index: ${params.index}, size: ${sizeInPoints}, units: "points" });
     `;
     const response = await this.executor.execute(code);
     return formatResponse(response.result);

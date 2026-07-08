@@ -34,6 +34,9 @@ import { ImageHandler } from '../handlers/ImageHandler.js';
 import { LayerHandler } from '../handlers/LayerHandler.js';
 import { ShapeHandler } from '../handlers/ShapeHandler.js';
 import { UndoHandler } from '../handlers/UndoHandler.js';
+import { AnchoredObjectHandler } from '../handlers/AnchoredObjectHandler.js';
+import { ListHandler } from '../handlers/ListHandler.js';
+import { DataMergeHandler } from '../handlers/DataMergeHandler.js';
 
 export class IndesignMcpServer {
   private mcpServer: McpServer;
@@ -55,7 +58,7 @@ export class IndesignMcpServer {
 
     // Register all handlers
     const handlers = [
-      new DocumentHandler(this.executor),
+      new DocumentHandler(this.executor, this.sessionManager),
       new PageHandler(this.executor),
       new TextHandler(this.executor),
       new StyleHandler(this.executor),
@@ -83,6 +86,9 @@ export class IndesignMcpServer {
       new LayerHandler(this.executor),
       new ShapeHandler(this.executor),
       new UndoHandler(this.executor),
+      new AnchoredObjectHandler(this.executor),
+      new ListHandler(this.executor),
+      new DataMergeHandler(this.executor),
     ];
 
     for (const handler of handlers) {
@@ -98,7 +104,7 @@ export class IndesignMcpServer {
         contents: [
           {
             uri: uri.href,
-            text: JSON.stringify(this.sessionManager.getAllSessions()),
+            text: JSON.stringify(Object.fromEntries(this.sessionManager.getAllSessions())),
             mimeType: 'application/json',
           },
         ],
@@ -114,6 +120,39 @@ export class IndesignMcpServer {
           {
             uri: uri.href,
             text: JSON.stringify(this.executor.getStatus()),
+            mimeType: 'application/json',
+          },
+        ],
+      }),
+    );
+
+    // Register tools inventory resource (for agent auto-discovery)
+    const toolInventory = handlers.flatMap(h =>
+      h.tools.map(t => ({ handler: h.name, name: t.name, description: t.description }))
+    );
+    this.mcpServer.resource(
+      'tools_inventory',
+      'mcp://tools/inventory',
+      async (uri: URL) => ({
+        contents: [
+          {
+            uri: uri.href,
+            text: JSON.stringify(toolInventory, null, 2),
+            mimeType: 'application/json',
+          },
+        ],
+      }),
+    );
+
+    // Register document resource (active document state)
+    this.mcpServer.resource(
+      'document_active',
+      'mcp://document/active',
+      async (uri: URL) => ({
+        contents: [
+          {
+            uri: uri.href,
+            text: JSON.stringify(this.sessionManager.getOrCreate('default').activeDoc ?? { active: false }),
             mimeType: 'application/json',
           },
         ],

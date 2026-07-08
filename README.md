@@ -1,408 +1,306 @@
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-3178C6)](https://www.typescriptlang.org/)
-[![MCP](https://img.shields.io/badge/MCP-Server-000000)](https://modelcontextprotocol.io/)
-[![InDesign](https://img.shields.io/badge/InDesign-2024+-007396)](https://www.adobe.com/products/indesign.html)
-[![UXP](https://img.shields.io/badge/UXP-Plugin-FF3366)](https://developer.adobe.com/uxp/)
-[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
-
 # indesign-nutria-mcp
 
-**Control Adobe InDesign from any AI agent via the Model Context Protocol (MCP).**
+**Control Adobe InDesign from any AI agent via the Model Context Protocol.**
 
-Create documents, place text, draw shapes, apply styles, manage layers, build tables, export PDFs — all through natural language. No CEP panels, no ExtendScript console, no manual steps.
+Create documents, place text, draw shapes, apply styles, export PDFs — all through natural language. No CEP panels, no ExtendScript console, no manual steps.
 
-## Overview
+![InDesign](https://img.shields.io/badge/InDesign-2022%2B-blue) ![MCP](https://img.shields.io/badge/MCP-1.0-green) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-This MCP server bridges AI agents (Claude, GPT, Gemini, etc.) to Adobe InDesign's full DOM through 177 tools organized across 28 handler modules. Communication happens via a UXP panel plugin that executes ExtendScript and returns results.
+---
 
-| Metric | Value |
-|---|---|
-| **Total Tools** | 177 |
-| **Handler Modules** | 28 |
-| **DOM Coverage** | Full (documents, pages, layers, text, shapes, tables, images, styles, effects, colors, TOC, XML, books, cross-refs, hyperlinks, anchors, index, undo/redo) |
-| **Protocol** | MCP (stdio transport) |
-| **Bridge** | UXP Plugin + Express + WebSocket |
+## ✨ What it does
 
-## Architecture
+indesign-nutria-mcp is an MCP server that bridges AI agents (Claude, OpenCode, etc.) to Adobe InDesign. It speaks two protocols:
 
-```
-AI Agent (Claude/GPT/etc.)
-  │  MCP stdio
-  ▼
-indesign-nutria-mcp (Node.js server)
-  │  HTTP/WebSocket
-  ▼
-bridge-proxy.mjs (Express proxy)
-  │  HTTP
-  ▼
-UXP Plugin (runs inside InDesign)
-  │  ExtendScript
-  ▼
-Adobe InDesign DOM
-```
+| Transport | Connects | Used by |
+|-----------|----------|---------|
+| **STDIO** | MCP client ↔ Server | AI agents (OpenCode, Claude Desktop) |
+| **WebSocket** (port 8120) | Server ↔ InDesign | UXP plugin running inside InDesign |
 
-The flow:
-1. Agent calls an MCP tool (e.g., `shape_rectangle_create`)
-2. Server validates parameters with Zod schemas
-3. Server sends command to the UXP bridge via HTTP/WebSocket
-4. UXP plugin executes the corresponding ExtendScript in InDesign
-5. Result flows back through the same chain
+The server exposes **31 handlers** with **183 tools** covering the full InDesign DOM.
 
-## Tool Catalog (177 tools)
+### What's new in v1.1.0
 
-### Document & Pages (15 tools)
+| Feature | Tools | What it solves |
+|---------|-------|----------------|
+| **Text formatting read** | `text_getFormatting` | Returns font, size, style, characterStyle per text range. No more custom scripts to check formatting. |
+| **Character style apply** | `text_applyCharStyle` | Apply character style to a range in one call. No more indexOf + itemByRange + set boilerplate. |
+| **Font apply** | `text_applyFont` | Apply font family/style/size to a text range. |
+| **Text search** | `text_search`, `text_searchFormatting` | GREP search + format-aware search returning paragraphIndex, charStart, charEnd for each match. |
+| **Story–Page navigation** | `document_getPageStories`, `document_getStoryPages` | Map which stories live on which pages and vice versa. |
+| **Undo groups** | `undo_beginGroup`, `undo_endGroup` | Group multiple tool calls into a single undo step. |
+| **Debug mode** | `script_run(code, debug=true)` | Returns ExtendScript error line number, fileName, and stack trace on failure. |
+| **Timeout / maxResults** | Added to `text_getStories`, `text_getTextFrames`, `text_getContent` | Custom timeout and result limit for large documents. |
+| **BOM filtering** | Added to text reads | Filters `\ufeff` (BOM) and `\u0004` (InDesign internal) by default. Use `includeControlChars: true` to get raw content. |
+| **MCP resources** | `mcp://tools/inventory`, `mcp://document/active` | Agent auto-discovery, session tracking. |
 
-| Tool | Description |
-|---|---|
-| `document_create` | Create new document with dimensions, margins, bleed, slug |
-| `document_open` | Open existing .indd file |
-| `document_close` | Close with save options (yes/no/ask) |
-| `document_save` | Save to current or new path |
-| `document_getInfo` | Get page count, dimensions, margins |
-| `document_listOpen` | List all open documents |
-| `page_add` | Add page at position (atEnd, atBeginning, before, after) |
-| `page_delete` | Delete page by index |
-| `page_duplicate` | Duplicate page |
-| `page_move` | Move page to new index |
-| `page_getInfo` | Get page details |
-| `page_listAll` | List all pages with properties |
-| `page_applyMaster` | Apply master spread to page |
-| `section_create` | Create section with numbering options |
-| `section_list` | List all sections |
+---
 
-### Text & Typography (18 tools)
-
-| Tool | Description |
-|---|---|
-| `text_addFrame` | Add text frame with content |
-| `text_getContent` | Get text frame content |
-| `text_setContent` | Set text frame content |
-| `text_getTextFrames` | List text frames on a page |
-| `text_getStories` | List all stories in document |
-| `text_linkFrames` | Thread two text frames together |
-| `text_unlinkFrames` | Unlink from thread |
-| `text_setColumns` | Set column count and gutter |
-| `text_setInsetSpacing` | Set inset spacing (top/left/bottom/right) |
-| `text_setVerticalJustification` | Set vertical alignment |
-| `text_setAutoSize` | Set auto-sizing (off/height/width) |
-| `text_setFirstBaseline` | Set first baseline offset |
-| `text_setIgnoreWrap` | Set text wrap ignore |
-| `text_setTextWrap` | Set text wrap preferences |
-| `text_applyParagraphStyle` | Apply paragraph style |
-| `text_setDropCap` | Set drop cap options |
-| `text_setKeepOptions` | Set widow/orphan control |
-| `text_setHyphenation` | Set hyphenation settings |
-| `text_setTabs` | Set tab stops |
-| `text_setParagraphRuleAbove` | Add rule above paragraph |
-| `text_setParagraphRuleBelow` | Add rule below paragraph |
-
-### Fonts (4 tools)
-
-| Tool | Description |
-|---|---|
-| `font_list` | List all available fonts |
-| `font_find` | Search fonts by name |
-| `font_change` | Change font of selected text |
-| `font_missing_check` | Check for missing fonts |
-| `font_glyph_insert` | Insert special glyph |
-
-### Shapes & Objects (12 tools)
-
-| Tool | Description |
-|---|---|
-| `shape_create` | Create rectangle, ellipse, polygon, or line |
-| `shape_rectangle_create` | Create rectangle with position/size |
-| `shape_ellipse_create` | Create ellipse/circle |
-| `shape_polygon_create` | Create polygon (3-100 sides) |
-| `shape_line_create` | Create graphic line |
-| `shape_modify` | Modify shape properties |
-| `shape_delete` | Delete shape |
-| `shape_list` | List shapes on page |
-| `group_list` | List groups on page |
-| `group_ungroup` | Ungroup a group |
-| `anchoredObject_create` | Create anchored object at insertion point |
-| `anchoredObject_getSettings` | Get anchored object settings |
-| `anchoredObject_setPosition` | Reposition anchored object |
-| `anchoredObject_setProperties` | Set anchored object properties |
-| `anchoredObject_release` | Release anchored object |
-
-### Images (9 tools)
-
-| Tool | Description |
-|---|---|
-| `image_place` | Place image from file path |
-| `image_info` | Get image metadata |
-| `image_list` | List images on page |
-| `image_fit` | Fit content to frame (fill, proportional, etc.) |
-| `image_adjust` | Adjust brightness/contrast |
-| `image_relink` | Relink/replace image |
-| `image_getLinks` | Get link status for all images |
-
-### Colors & Swatches (6 tools)
-
-| Tool | Description |
-|---|---|
-| `color_swatch_create` | Create CMYK/RGB/LAB/spot swatch |
-| `color_swatch_delete` | Delete swatch by name |
-| `color_swatch_list` | List all swatches |
-| `color_apply` | Apply swatch to fill/stroke/both |
-| `color_gradient_create` | Create linear/radial gradient |
-| `color_ink_list` | List all inks |
-
-### Effects (5 tools)
-
-| Tool | Description |
-|---|---|
-| `effect_applyDropShadow` | Apply drop shadow (distance, angle, blur, opacity) |
-| `effect_applyFeather` | Apply basic/directional/gradient feather |
-| `effect_applyGradientFeather` | Apply gradient feather |
-| `effect_applyTransparency` | Set opacity and blend mode |
-
-### Layers (5 tools)
-
-| Tool | Description |
-|---|---|
-| `layer_create` | Create layer (visible, locked, printable) |
-| `layer_delete` | Delete layer |
-| `layer_list` | List all layers |
-| `layer_reorder` | Move layer in stack |
-| `layer_setProperties` | Set layer visibility/lock/print |
-
-### Styles (10 tools)
-
-| Tool | Description |
-|---|---|
-| `style_createParagraph` | Create paragraph style |
-| `style_createCharacter` | Create character style |
-| `style_listParagraph` | List paragraph styles |
-| `style_listCharacter` | List character styles |
-| `style_listObject` | List object styles |
-| `style_delete` | Delete a style |
-| `style_duplicate` | Duplicate a style |
-
-### Tables (18 tools)
-
-| Tool | Description |
-|---|---|
-| `table_create` | Create table at bounds |
-| `table_getInfo` | Get table info (rows, columns, cells) |
-| `table_list` | List all tables |
-| `table_addRow` | Add row at index |
-| `table_addColumn` | Add column at index |
-| `table_deleteRow` | Delete row |
-| `table_deleteColumn` | Delete column |
-| `table_setCell` | Set cell content |
-| `table_setCellAlignment` | Set cell text alignment |
-| `table_setCellFill` | Set cell fill color/tint |
-| `table_setCellStroke` | Set cell edge stroke |
-| `table_setCellInset` | Set cell inset spacing |
-| `table_mergeCells` | Merge cell range |
-| `table_splitCell` | Split merged cell |
-| `table_setRowColumnSize` | Set row height or column width |
-| `table_setHeaderFooter` | Set header/footer rows |
-| `tableStyle_create` | Create table style |
-| `tableStyle_list` | List table styles |
-| `cellStyle_create` | Create cell style |
-| `cellStyle_list` | List cell styles |
-
-### Masters & Books (10 tools)
-
-| Tool | Description |
-|---|---|
-| `master_create` | Create master spread |
-| `master_list` | List master spreads |
-| `master_apply` | Apply master to page |
-| `master_delete` | Delete master |
-| `master_duplicate` | Duplicate master |
-| `master_getPages` | List pages on master |
-| `book_list` | List open books |
-| `book_open` | Open .indb book file |
-| `book_getDocuments` | List documents in book |
-| `book_synchronize` | Sync with style source |
-
-### Export & Preflight (7 tools)
-
-| Tool | Description |
-|---|---|
-| `export_document` | Export to PDF/EPUB/HTML/JPG/PNG/package |
-| `export_getFonts` | Get all fonts in document |
-| `export_getSwatches` | Get all swatches |
-| `export_getTables` | Get all tables |
-| `export_getMasterSpreads` | Get master spreads |
-| `export_getXmlTags` | Get XML tags |
-| `export_preflight` | Run preflight check |
-
-### Find/Replace & GREP (5 tools)
-
-| Tool | Description |
-|---|---|
-| `text_findReplace` | Find and replace text |
-| `grep_find` | GREP pattern search |
-| `grep_findFormat` | Find with formatting |
-| `grep_replace` | GREP find and replace |
-| `grep_replaceFormat` | GREP replace with formatting |
-
-### Transform (5 tools)
-
-| Tool | Description |
-|---|---|
-| `transform_rotate` | Rotate object by angle |
-| `transform_scale` | Scale by percentages |
-| `transform_flip` | Flip horizontally/vertically |
-| `transform_align` | Align objects (left/center/right/top/middle/bottom) |
-| `transform_distribute` | Distribute objects evenly |
-
-### Interactive (5 tools)
-
-| Tool | Description |
-|---|---|
-| `interactive_addHyperlink` | Add URL hyperlink |
-| `interactive_deleteHyperlink` | Delete hyperlink |
-| `interactive_listHyperlinks` | List hyperlinks |
-| `interactive_listAnchors` | List cross-ref anchors |
-| `interactive_listButtons` | List buttons |
-
-### Notes & References (10 tools)
-
-| Tool | Description |
-|---|---|
-| `note_addFootnote` | Add footnote to paragraph |
-| `note_addEndnote` | Add endnote to story |
-| `note_listFootnotes` | List footnotes |
-| `note_footnoteOptions` | Set footnote numbering/layout |
-| `xref_create` | Create cross-reference |
-| `xref_list` | List cross-references |
-| `xref_updateFormat` | Update cross-reference format |
-| `index_addEntry` | Add index entry |
-| `index_createTopic` | Create index topic |
-| `index_listTopics` | List index topics |
-| `index_generate` | Generate index on page |
-
-### TOC (4 tools)
-
-| Tool | Description |
-|---|---|
-| `toc_createStyle` | Create/update TOC style |
-| `toc_generate` | Generate TOC on page |
-| `toc_update` | Regenerate existing TOC |
-| `toc_listStyles` | List TOC styles |
-
-### XML (6 tools)
-
-| Tool | Description |
-|---|---|
-| `xml_addTag` | Create XML tag |
-| `xml_deleteTag` | Delete XML tag |
-| `xml_listTags` | List XML tags |
-| `xml_tagPageItem` | Tag page item |
-| `xml_import` | Import XML |
-| `xml_export` | Export XML |
-
-### Resources & Links (6 tools)
-
-| Tool | Description |
-|---|---|
-| `resources_listLinks` | List all links |
-| `resources_getLinkInfo` | Get link details |
-| `resources_updateLink` | Relink to new file |
-| `resources_updateAllLinks` | Fix all broken links |
-| `resources_embedLink` | Embed linked file |
-| `resources_unembedLink` | Unembed to external file |
-
-### Data Merge (4 tools)
-
-| Tool | Description |
-|---|---|
-| `dataMerge_selectDataSource` | Select CSV/TSV/XML source |
-| `dataMerge_listFields` | List merge fields |
-| `dataMerge_mergeRecords` | Merge records |
-| `dataMerge_removeDataSource` | Remove data source |
-| `dataMerge_export` | Export merged output |
-
-### Undo/Redo (3 tools)
-
-| Tool | Description |
-|---|---|
-| `undo` | Undo last operation |
-| `redo` | Redo last undone |
-| `undo_history` | Get undo/redo state |
-
-## Quick Start
+## 🚀 Quick start
 
 ### Prerequisites
 
-- Adobe InDesign 2024+ (with UXP support)
-- Node.js 18+
-- UXP Developer Tool (UDT)
+- Node.js ≥ 18
+- Adobe InDesign 2022 or later
+- [UXP Developer Tool](https://developer.adobe.com/uxp/) (once, to load the plugin)
 
-### Install & Run
+### Install
 
 ```bash
-# Clone
-git clone https://github.com/nutriandrea/adobe-indesign-mcp.git
-cd adobe-indesign-mcp
-
-# Install dependencies
+git clone https://github.com/nutriandrea/adobe-indesign-mcp
+cd indesign-nutria-mcp
 npm install
-
-# Build
 npm run build
-
-# Load UXP plugin via UDT:
-# 1. Open UXP Developer Tool
-# 2. Add plugin -> select plugin/manifest.json
-# 3. Click "Load" — plugin appears in InDesign
-
-# Start MCP server
-npm start
 ```
 
-### Claude Desktop Integration
+### 1. Start the server
 
-Add to your `claude_desktop_config.json`:
+```bash
+node dist/index.js opencode-indesign.json
+```
+
+### 2. Open InDesign + load the plugin
+
+1. Launch **Adobe InDesign**
+2. Open **UXP Developer Tool**
+3. Load the `plugin/` directory
+4. Click the **•••** menu → **MCP Bridge**
+5. Click **Connect** (default: `ws://localhost:8120`)
+
+### 3. Connect your AI
+
+Configure your MCP client with:
 
 ```json
 {
   "mcpServers": {
-    "indesign-nutria-mcp": {
+    "indesign": {
       "command": "node",
-      "args": ["/path/to/indesign-nutria-mcp/dist/index.js"]
+      "args": ["dist/index.js", "opencode-indesign.json"]
     }
   }
 }
 ```
 
-## Project Structure
+Now you can say things like:
+
+> *"Create an A4 document with 5 pages. Add a red circle on page 3 and the text 'Hello' in Arial Bold 24pt."*
+
+> *"Check what font is used in the first paragraph of story 0."*
+
+> *"Find all text in Bold in the document."*
+
+---
+
+## 🛠️ New declarative tools
+
+### Text formatting (read)
+
+```typescript
+text_getFormatting(storyIndex, paragraphIndex)
+// Returns: [{ start, end, font, fontStyle, pointSize, characterStyle, fillColor, capitalization, tracking, ... }]
+```
+
+No more writing custom ExtendScript just to check what font or style is applied. Each text style range is returned with full formatting properties, using paragraph-relative character indices.
+
+### Text formatting (write)
+
+```typescript
+text_applyCharStyle(storyIndex, paragraphIndex, startChar, endChar, styleName)
+text_applyFont(storyIndex, paragraphIndex, startChar, endChar, fontFamily?, fontStyle?, pointSize?)
+```
+
+Apply character styles or font changes to a range within a paragraph in a single tool call. Uses `itemByRange` internally — no manual index math.
+
+### Search
+
+```typescript
+text_search(storyIndex, pattern, maxResults?, timeout?)
+// Returns: { totalFound, matches: [{ paragraphIndex, charStart, charEnd, text }] }
+
+text_searchFormatting(storyIndex, fontFamily?, fontStyle?, pointSize?, maxResults?, timeout?)
+// Returns: { totalFound, matches: [{ paragraphIndex, charStart, charEnd, text }] }
+```
+
+GREP-powered text search and format-aware search. Returns paragraph-relative character positions so you can immediately pipe results into `text_applyCharStyle` or `text_applyFont`.
+
+### Document navigation
+
+```typescript
+document_getPageStories(pageIndex)
+// Returns: [{ storyIndex, length, textFrames, textFrameIndices, contentPreview }]
+
+document_getStoryPages(storyIndex)
+// Returns: [{ pageIndex, pageName }]
+```
+
+Map stories to pages and vice versa. Essential for understanding document layout without manual exploration.
+
+### Safety
+
+```typescript
+undo_beginGroup()  // All subsequent tool calls become a single undo step
+undo_endGroup()    // Restore normal undo granularity
+```
+
+### Debug
+
+```typescript
+script_run(code, debug: true, timeout?)
+```
+
+When `debug: true`, ExtendScript errors include line number, fileName, and full stack trace. No more opaque "Script execution failed" messages.
+
+### BOM filtering
+
+All text-reading tools (`text_getContent`, `text_getStories`, `text_getTextFrames`, `text_getFormatting`) filter `\ufeff` (BOM) and `\u0004` (InDesign internal control char) by default. Pass `includeControlChars: true` to get raw content.
+
+### Timeout / maxResults
+
+`text_getStories`, `text_getTextFrames`, `text_search`, `text_searchFormatting` accept optional `timeout` (ms) and `maxResults` params. Default timeout is 30s; increase for large documents.
+
+---
+
+## 🧠 AI Skills (`.opencode/skills/`)
+
+Ten skills ship with this repo. They are **auto-loaded by trigger keywords** when you talk to the AI agent:
+
+| # | Skill | Purpose |
+|---|-------|---------|
+| 1 | **Aesthetic Preference** | 8 questions before any creative work — font, palette, style, margins, constraints. Builds a persistent JSON profile. |
+| 2 | **Layout Readability** | Validates overlays, contrast, orphans/widows, hierarchy, spacing, overflow before delivery. |
+| 3 | **Export & Verify** | Mandatory **modify → export JPG → analyze pixels → fix → repeat** cycle. |
+| 4 | **Import Word** | Imports `.docx`, maps Word styles (Heading 1/Normal/List) to InDesign paragraph styles. |
+| 5 | **Batch Operations** | Applies the same modification across N pages (bulk text, master apply, export all). |
+| 6 | **Image Optimize** | Place, resize, DPI check, relink images. Profiles for print (300dpi CMYK) vs web (72dpi RGB). |
+| 7 | **Table Format** | Creates and styles tables — columns, rows, borders, fills, text alignment, merge cells. |
+| 8 | **Template Manager** | Save/load reusable page templates as `.indd` files or `.indt` library. |
+| 9 | **Export Batch** | Exports the same document to **multiple formats at once** (PDF + JPG + PNG), each with its own profile. |
+| 10 | **Style Extractor** | Scans a folder of `.indd` files, **extracts full style profile** (fonts, colors, paragraph/character styles, master spreads, margins), saves as JSON, then replicates it on a new book layout. |
+
+---
+
+## 🏗️ Architecture
+
+```
+┌────────────────┐     STDIO      ┌──────────────────┐    WebSocket     ┌──────────────┐
+│   AI Agent     │ ◄──────────►   │  MCP Server      │ ◄─────────────► │  InDesign    │
+│  (OpenCode,    │                │  (node)           │    port 8120    │  + UXP plugin│
+│   Claude, ...) │                │                   │                 │              │
+└────────────────┘                └──────────────────┘                 └──────────────┘
+                                          │
+                                     ┌─────┴─────┐
+                                     │ 31 handlers│
+                                     │ 183 tools  │
+                                     └───────────┘
+```
+
+### MCP Resources
+
+| Resource URI | Description |
+|---|---|
+| `mcp://session/status` | Active document session state |
+| `mcp://bridge/status` | WebSocket bridge connection status + queue depth |
+| `mcp://tools/inventory` | Full list of all 183 tools with descriptions (agent auto-discovery) |
+| `mcp://document/active` | Currently active document info |
+
+### Handlers at a glance
+
+| Handler | Tools | Notable |
+|---------|-------|---------|
+| **AnchoredObject** | 5 | create, getSettings, release, setPosition, setProperties |
+| **Book** | 4 | list, open, getDocuments, synchronize |
+| **Color** | 6 | swatch list/create/delete, ink list, gradient create, apply |
+| **DataMerge** | 5 | selectDataSource, listFields, mergeRecords, export, removeDataSource |
+| **Document** | **8** | create/open/save/close, getInfo, listOpen, **getPageStories, getStoryPages** |
+| **Effect** | 4 | drop shadow, feather, transparency, gradient feather |
+| **Export** | **9** | export (PDF/EPUB/HTML/JPG/PNG/package), preflight, fonts/swatches/tables, **script_run** |
+| **Font** | 5 | list, find, change, missing check, glyph insert |
+| **Grep** | 4 | find, replace, findFormat, replaceFormat |
+| **Image** | 5 | place, info, adjust, fit, relink |
+| **Index** | 4 | addEntry, createTopic, generate, listTopics |
+| **Interactive** | 5 | list/add/delete hyperlinks, list buttons, list anchors |
+| **Layer** | 5 | create, list, setProperties, reorder, delete |
+| **List** | 6 | define, list, applyToParagraph/Selection, removeFromParagraph, restartNumbering |
+| **Master** | 6 | create, duplicate, apply, delete, list, getPages |
+| **Note** | 4 | addFootnote/Endnote, listFootnotes, footnoteOptions |
+| **Object** | 6 | shape list/create, group list/ungroup, image getLinks/list |
+| **Page** | 7 | add, delete, duplicate, move, getInfo, listAll, applyMaster |
+| **Resources** | 6 | list/update/embed/unembed links, getLinkInfo |
+| **Section** | 4 | create, list, setNumbering, delete |
+| **Shape** | 6 | rectangle/ellipse/line/polygon create, delete, modify |
+| **Style** | 7 | list/create paragraph/character/object styles, duplicate, delete |
+| **Table** | 16 | create, setCell, addRow/Column, deleteRow/Column, merge/split cells, getInfo/list, header/footer, alignment, fills, strokes |
+| **TableStyle** | 4 | tableStyle create/list, cellStyle create/list |
+| **Text** | 7 | addFrame, setContent, **getContent (BOM filter, timeout)**, getTextFrames, **getStories (maxResults, timeout)**, findReplace, applyParagraphStyle |
+| **TextAdvanced** | **20** | link/unlink frames, columns, wrap, drop caps, keep opts, inset, auto-size, vert just, baseline, rules, tabs, hyphenation, **getFormatting, applyCharStyle, applyFont, search, searchFormatting** |
+| **Toc** | 4 | createStyle, generate, listStyles, update |
+| **Transform** | 5 | align, distribute, rotate, scale, flip |
+| **Undo** | **5** | undo, redo, history, **beginGroup, endGroup** |
+| **Xml** | 6 | listTags, addTag, deleteTag, tagPageItem, export, import |
+| **Xref** | 3 | create, list, updateFormat |
+
+---
+
+## 📁 Project structure
 
 ```
 ├── src/
-│   ├── index.ts              # Entry point, config loading
-│   ├── server/               # MCP server core (IndesignMcpServer)
-│   ├── handlers/             # 28 handler modules (one per feature area)
-│   ├── core/                 # Core ExtendScript commands
-│   ├── bridge/               # UXP bridge communication
-│   ├── schemas/              # Zod validation schemas
-│   ├── types/                # TypeScript type definitions
-│   ├── utils/                # Logger, config loader
-│   └── ...
-├── plugin/                   # UXP panel plugin files
-├── bridge-proxy.mjs          # Express proxy for UXP<->MCP communication
-├── tests/                    # Vitest test suite
-└── package.json
+│   ├── server/          # MCP server (STDIO transport)
+│   ├── bridge/          # WebSocket bridge + ExtendScript executor
+│   ├── handlers/        # 31 handler modules (183 tools)
+│   ├── schemas/         # Zod schemas for tool parameters
+│   ├── core/            # Session tracking
+│   ├── types/           # TypeScript definitions
+│   └── utils/           # Config loader, logger, JSON polyfill, security
+├── plugin/              # UXP panel source (index.html, index.js, manifest.json)
+├── tests/               # 747+ tests (vitest)
+├── .opencode/skills/    # 10 AI agent skills
+├── .sisyphus/context/   # Persistent aesthetic profile storage
+├── dist/                # Compiled JavaScript
+├── opencode.json        # OpenCode MCP configuration
+└── bridge-proxy.mjs     # Alternative WebSocket→JXA bridge (fallback)
 ```
 
-## Development
+---
+
+## 🧪 Testing
 
 ```bash
-# Watch mode
-npm run dev
-
-# Run tests
+# All tests (unit + integration)
 npm test
+
+# Watch mode
+npm run test:watch
+
+# Build
+npm run build
 
 # Lint
 npm run lint
 ```
 
-## License
+---
+
+## 📋 Requirements
+
+- **Adobe InDesign** 2022 or later (2024/2025/2026 recommended)
+- **macOS** (Windows support via CEP planned)
+- **Node.js** 18+
+
+---
+
+## 🤝 Contributing
+
+PRs welcome. The handler pattern is straightforward:
+
+1. Create `src/handlers/YourHandler.ts`
+2. Implement tools with Zod parameter schemas
+3. Register in `IndesignMcpServer.ts`
+4. Add tests in `tests/`
+
+---
+
+## 📄 License
 
 MIT

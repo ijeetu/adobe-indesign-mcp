@@ -12,9 +12,40 @@ export class InDesignError extends Error {
   }
 }
 
+function parseResult(raw: unknown): unknown {
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return raw;
+    }
+  }
+  return raw;
+}
+
+function isExtendScriptError(obj: unknown): obj is { __extendscript_error: true; message: string; line: number; fileName?: string; stack?: string } {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    (obj as Record<string, unknown>).__extendscript_error === true
+  );
+}
+
 export function formatResponse(data: unknown): ToolResult {
+  const parsed = parseResult(data);
+
+  if (isExtendScriptError(parsed)) {
+    const parts = [`ExtendScript error: ${parsed.message}`, `Line: ${parsed.line}`];
+    if (parsed.fileName) parts.push(`File: ${parsed.fileName}`);
+    if (parsed.stack) parts.push(`Stack:\n${parsed.stack}`);
+    return {
+      content: [{ type: 'text', text: parts.join('\n') }],
+      isError: true,
+    };
+  }
+
   return {
-    content: [{ type: 'text', text: JSON.stringify(data ?? 'ok') }],
+    content: [{ type: 'text', text: JSON.stringify(parsed ?? 'ok') }],
   };
 }
 

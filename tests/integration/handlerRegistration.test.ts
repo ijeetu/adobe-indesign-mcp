@@ -15,6 +15,10 @@ import { ResourcesHandler } from '../../src/handlers/ResourcesHandler.js';
 import { BookHandler } from '../../src/handlers/BookHandler.js';
 import { InteractiveHandler } from '../../src/handlers/InteractiveHandler.js';
 import { XmlHandler } from '../../src/handlers/XmlHandler.js';
+import { AnchoredObjectHandler } from '../../src/handlers/AnchoredObjectHandler.js';
+import { ListHandler } from '../../src/handlers/ListHandler.js';
+import { DataMergeHandler } from '../../src/handlers/DataMergeHandler.js';
+import { TextAdvancedHandler } from '../../src/handlers/TextAdvancedHandler.js';
 
 interface HandlerPair {
   name: string;
@@ -35,6 +39,10 @@ describe('Handler Registration', () => {
     { name: 'BookHandler', instance: new BookHandler(new ScriptExecutor(5000)) },
     { name: 'InteractiveHandler', instance: new InteractiveHandler(new ScriptExecutor(5000)) },
     { name: 'XmlHandler', instance: new XmlHandler(new ScriptExecutor(5000)) },
+    { name: 'AnchoredObjectHandler', instance: new AnchoredObjectHandler(new ScriptExecutor(5000)) },
+    { name: 'ListHandler', instance: new ListHandler(new ScriptExecutor(5000)) },
+    { name: 'DataMergeHandler', instance: new DataMergeHandler(new ScriptExecutor(5000)) },
+    { name: 'TextAdvancedHandler', instance: new TextAdvancedHandler(new ScriptExecutor(5000)) },
   ];
 
   for (const { name, instance } of handlerPairs) {
@@ -86,12 +94,12 @@ describe('Handler Registration', () => {
     expect(duplicates).toEqual([]);
   });
 
-  it('should produce exactly 76 tools across all 12 handlers', () => {
+  it('should produce exactly 123 tools across all 16 handlers', () => {
     let total = 0;
     for (const { instance } of handlerPairs) {
       total += instance.tools.length;
     }
-    expect(total).toBe(76);
+    expect(total).toBe(123);
   });
 
   it('should have tool names prefixed with handler category', () => {
@@ -102,6 +110,12 @@ describe('Handler Registration', () => {
         if (name === 'ObjectHandler') {
           const validPrefixes = ['image_', 'shape_', 'group_'];
           expect(validPrefixes.some(p => tool.name.startsWith(p))).toBe(true);
+        } else if (name === 'TextAdvancedHandler') {
+          // TextAdvancedHandler uses text_ prefix (extends TextHandler namespace)
+          expect(tool.name.startsWith('text_')).toBe(true);
+        } else if (name === 'ExportHandler' && tool.name === 'script_run') {
+          // script_run is a general-purpose debug tool, not scoped to export_
+          expect(tool.name).toBe('script_run');
         } else {
           expect(tool.name.startsWith(category + '_')).toBe(true);
         }
