@@ -1,0 +1,15 @@
+.github/
+.omo/
+.opencode/
+.sisyphus/
+bridge-proxy.mjs
+build-portfolio.mjs
+mcp-tool.mjs
+test-config.json
+tsconfig.json
+vitest.config.ts
+src/
+tests/
+coverage/
+docs/
+*.ts

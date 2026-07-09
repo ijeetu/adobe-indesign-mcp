@@ -1,0 +1,37 @@
+name: Bug Report
+description: Something isn't working
+labels: [bug]
+body:
+  - type: input
+    id: tool
+    attributes:
+      label: Tool name
+      description: Which MCP tool is affected?
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? What did you expect?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: npm ls indesign-nutria-mcp
+    validations:
+      required: true
+  - type: input
+    id: indesign
+    attributes:
+      label: InDesign version
+      description: e.g. InDesign 2025 v20.0
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      render: shell

@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a0a1a"/>
+      <stop offset="100%" stop-color="#1a0a2e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="box1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#0f0d2a"/>
+    </linearGradient>
+    <linearGradient id="indesign" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2d1b69"/>
+      <stop offset="100%" stop-color="#1a0a3e"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="400" fill="url(#bg)"/>
+
+  <!-- Grid pattern -->
+  <g opacity="0.03">
+    <line x1="0" y1="0" x2="1200" y2="0" stroke="#fff" stroke-width="0.5"/>
+    <line x1="0" y1="50" x2="1200" y2="50" stroke="#fff" stroke-width="0.5"/>
+    <line x1="0" y1="100" x2="1200" y2="100" stroke="#fff" stroke-width="0.5"/>
+    <line x1="0" y1="150" x2="1200" y2="150" stroke="#fff" stroke-width="0.5"/>
+    <line x1="0" y1="200" x2="1200" y2="200" stroke="#fff" stroke-width="0.5"/>
+    <line x1="0" y1="250" x2="1200" y2="250" stroke="#fff" stroke-width="0.5"/>
+    <line x1="0" y1="300" x2="1200" y2="300" stroke="#fff" stroke-width="0.5"/>
+    <line x1="0" y1="350" x2="1200" y2="350" stroke="#fff" stroke-width="0.5"/>
+    <line x1="0" y1="400" x2="1200" y2="400" stroke="#fff" stroke-width="0.5"/>
+    <line x1="0" y1="0" x2="0" y2="400" stroke="#fff" stroke-width="0.5"/>
+    <line x1="200" y1="0" x2="200" y2="400" stroke="#fff" stroke-width="0.5"/>
+    <line x1="400" y1="0" x2="400" y2="400" stroke="#fff" stroke-width="0.5"/>
+    <line x1="600" y1="0" x2="600" y2="400" stroke="#fff" stroke-width="0.5"/>
+    <line x1="800" y1="0" x2="800" y2="400" stroke="#fff" stroke-width="0.5"/>
+    <line x1="1000" y1="0" x2="1000" y2="400" stroke="#fff" stroke-width="0.5"/>
+    <line x1="1200" y1="0" x2="1200" y2="400" stroke="#fff" stroke-width="0.5"/>
+  </g>
+
+  <!-- Title -->
+  <text x="80" y="65" font-family="'SF Mono','Fira Code','Courier New',monospace" font-size="36" font-weight="bold" fill="#fff" letter-spacing="1">
+    indesign-nutria-mcp
+  </text>
+  <text x="80" y="95" font-family="'SF Mono','Fira Code','Courier New',monospace" font-size="16" fill="#a78bfa" letter-spacing="0.5">
+    The most comprehensive MCP server for Adobe InDesign
+  </text>
+
+  <!-- Accent line -->
+  <rect x="80" y="108" width="60" height="3" rx="1.5" fill="url(#accent)"/>
+
+  <!-- Architecture Flow -->
+  <!-- AI Agent box -->
+  <g filter="url(#shadow)">
+    <rect x="80" y="140" width="220" height="100" rx="12" fill="url(#box1)" stroke="#312e81" stroke-width="1.5"/>
+    <text x="190" y="175" font-family="'SF Mono','Fira Code',monospace" font-size="14" font-weight="bold" fill="#a78bfa" text-anchor="middle">AI Agent</text>
+    <text x="190" y="195" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#64748b" text-anchor="middle">Claude • OpenCode • Cursor</text>
+    <text x="190" y="215" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#64748b" text-anchor="middle">Any MCP-compatible agent</text>
+  </g>
+
+  <!-- Arrow 1 -->
+  <line x1="300" y1="190" x2="370" y2="190" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6,4"/>
+  <polygon points="365,184 375,190 365,196" fill="#7c3aed"/>
+  <text x="335" y="182" font-family="monospace" font-size="10" fill="#7c3aed" text-anchor="middle">STDIO</text>
+
+  <!-- MCP Server box -->
+  <g filter="url(#shadow)">
+    <rect x="380" y="140" width="240" height="100" rx="12" fill="url(#box1)" stroke="#312e81" stroke-width="1.5"/>
+    <rect x="380" y="140" width="240" height="28" rx="12" fill="#312e81"/>
+    <rect x="380" y="156" width="240" height="12" fill="#312e81"/>
+    <text x="500" y="160" font-family="'SF Mono','Fira Code',monospace" font-size="12" font-weight="bold" fill="#c4b5fd" text-anchor="middle">MCP Server</text>
+    <text x="500" y="185" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#e2e8f0" text-anchor="middle">31 Handlers</text>
+    <text x="500" y="203" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#e2e8f0" text-anchor="middle">183 Tools</text>
+    <text x="500" y="221" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#94a3b8" text-anchor="middle">Full DOM Coverage</text>
+  </g>
+
+  <!-- Arrow 2 -->
+  <line x1="620" y1="190" x2="690" y2="190" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6,4"/>
+  <polygon points="685,184 695,190 685,196" fill="#7c3aed"/>
+  <text x="655" y="182" font-family="monospace" font-size="10" fill="#7c3aed" text-anchor="middle">WS</text>
+
+  <!-- InDesign box -->
+  <g filter="url(#shadow)">
+    <rect x="700" y="140" width="220" height="100" rx="12" fill="url(#indesign)" stroke="#4c1d95" stroke-width="1.5"/>
+    <text x="810" y="175" font-family="'SF Mono','Fira Code',monospace" font-size="14" font-weight="bold" fill="#c084fc" text-anchor="middle">Adobe InDesign</text>
+    <text x="810" y="195" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#64748b" text-anchor="middle">UXP Plugin</text>
+    <text x="810" y="215" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#64748b" text-anchor="middle">ExtendScript Bridge</text>
+  </g>
+
+  <!-- Tool count badge -->
+  <g transform="translate(980, 140)">
+    <circle cx="20" cy="20" r="20" fill="#312e81"/>
+    <circle cx="20" cy="20" r="18" fill="none" stroke="url(#accent)" stroke-width="1.5" stroke-dasharray="4,2"/>
+    <text x="20" y="14" font-family="monospace" font-size="8" fill="#a78bfa" text-anchor="middle">183</text>
+    <text x="20" y="24" font-family="monospace" font-size="7" fill="#64748b" text-anchor="middle">TOOLS</text>
+  </g>
+
+  <!-- Bottom feature badges -->
+  <g transform="translate(80, 280)">
+    <rect x="0" y="0" width="240" height="36" rx="8" fill="#1e1b4b" stroke="#312e81" stroke-width="1"/>
+    <text x="120" y="23" font-family="'SF Mono','Fira Code',monospace" font-size="12" fill="#e2e8f0" text-anchor="middle">⚡ AI-Native Automation</text>
+  </g>
+  <g transform="translate(340, 280)">
+    <rect x="0" y="0" width="240" height="36" rx="8" fill="#1e1b4b" stroke="#312e81" stroke-width="1"/>
+    <text x="120" y="23" font-family="'SF Mono','Fira Code',monospace" font-size="12" fill="#e2e8f0" text-anchor="middle">🎨 Full InDesign DOM</text>
+  </g>
+  <g transform="translate(600, 280)">
+    <rect x="0" y="0" width="240" height="36" rx="8" fill="#1e1b4b" stroke="#312e81" stroke-width="1"/>
+    <text x="120" y="23" font-family="'SF Mono','Fira Code',monospace" font-size="12" fill="#e2e8f0" text-anchor="middle">🛡️ 10 AI Skills Included</text>
+  </g>
+
+  <!-- Bottom stats bar -->
+  <g transform="translate(80, 340)">
+    <line x1="0" y1="0" x2="1040" y2="0" stroke="#1e1b4b" stroke-width="1"/>
+    <text x="0" y="25" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#64748b">npm:</text>
+    <text x="36" y="25" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#a78bfa">indesign-nutria-mcp</text>
+    <text x="280" y="25" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#64748b">license:</text>
+    <text x="330" y="25" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#a78bfa">MIT</text>
+    <text x="520" y="25" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#64748b">node:</text>
+    <text x="556" y="25" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#a78bfa">≥ 18</text>
+    <text x="740" y="25" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#64748b">tests:</text>
+    <text x="780" y="25" font-family="'SF Mono','Fira Code',monospace" font-size="11" fill="#a78bfa">747 ✓</text>
+  </g>
+</svg>

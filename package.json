@@ -1,12 +1,37 @@
 {
   "name": "indesign-nutria-mcp",
   "version": "1.1.0",
-  "description": "MCP controller for Adobe InDesign — 183 tools, text formatting/read/search, story→page map, undo groups, BOM filtering, debug mode",
+  "description": "The most comprehensive MCP server for Adobe InDesign — 183 tools, full DOM control, AI-native automation",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
     "indesign-nutria-mcp": "./dist/index.js"
   },
+  "homepage": "https://github.com/nutriandrea/adobe-indesign-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nutriandrea/adobe-indesign-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nutriandrea/adobe-indesign-mcp/issues"
+  },
+  "keywords": [
+    "adobe",
+    "indesign",
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "automation",
+    "claude",
+    "opencode",
+    "extendscript",
+    "uxp",
+    "design-automation",
+    "publishing",
+    "print",
+    "layout"
+  ],
+  "license": "MIT",
   "scripts": {
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",

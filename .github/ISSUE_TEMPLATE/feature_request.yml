@@ -1,0 +1,36 @@
+name: Feature Request
+description: A tool or capability you'd like to see
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does it solve?
+      description: What can't you do currently?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the tool, its inputs, and what it should return.
+    validations:
+      required: true
+  - type: dropdown
+    id: handler
+    attributes:
+      label: Which handler?
+      options:
+        - New handler
+        - Document
+        - Export
+        - Font
+        - Image
+        - Page
+        - Shape
+        - Style
+        - Table
+        - Text
+        - TextAdvanced
+        - Undo
+        - Other

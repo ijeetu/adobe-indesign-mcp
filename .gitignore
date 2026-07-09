@@ -5,3 +5,16 @@ dist/
 .env
 test-config.json
 /bridge/
+coverage/
+.sisyphus/
+.opencode/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

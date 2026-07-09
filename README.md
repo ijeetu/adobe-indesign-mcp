@@ -1,76 +1,224 @@
-# indesign-nutria-mcp
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="media/hero.svg">
+    <img src="media/hero.svg" width="100%" alt="indesign-nutria-mcp">
+  </picture>
+</p>
 
-**Control Adobe InDesign from any AI agent via the Model Context Protocol.**
+<p align="center">
+  <b>Say "Create an A4 document with 5 pages, add a red circle on page 3" — and it happens.</b><br>
+  <i>The most comprehensive MCP server for Adobe InDesign. 183 tools. 31 handlers. Full DOM coverage.</i>
+</p>
 
-Create documents, place text, draw shapes, apply styles, export PDFs — all through natural language. No CEP panels, no ExtendScript console, no manual steps.
-
-![InDesign](https://img.shields.io/badge/InDesign-2022%2B-blue) ![MCP](https://img.shields.io/badge/MCP-1.0-green) ![License](https://img.shields.io/badge/license-MIT-lightgrey)
-
----
-
-## ✨ What it does
-
-indesign-nutria-mcp is an MCP server that bridges AI agents (Claude, OpenCode, etc.) to Adobe InDesign. It speaks two protocols:
-
-| Transport | Connects | Used by |
-|-----------|----------|---------|
-| **STDIO** | MCP client ↔ Server | AI agents (OpenCode, Claude Desktop) |
-| **WebSocket** (port 8120) | Server ↔ InDesign | UXP plugin running inside InDesign |
-
-The server exposes **31 handlers** with **183 tools** covering the full InDesign DOM.
-
-### What's new in v1.1.0
-
-| Feature | Tools | What it solves |
-|---------|-------|----------------|
-| **Text formatting read** | `text_getFormatting` | Returns font, size, style, characterStyle per text range. No more custom scripts to check formatting. |
-| **Character style apply** | `text_applyCharStyle` | Apply character style to a range in one call. No more indexOf + itemByRange + set boilerplate. |
-| **Font apply** | `text_applyFont` | Apply font family/style/size to a text range. |
-| **Text search** | `text_search`, `text_searchFormatting` | GREP search + format-aware search returning paragraphIndex, charStart, charEnd for each match. |
-| **Story–Page navigation** | `document_getPageStories`, `document_getStoryPages` | Map which stories live on which pages and vice versa. |
-| **Undo groups** | `undo_beginGroup`, `undo_endGroup` | Group multiple tool calls into a single undo step. |
-| **Debug mode** | `script_run(code, debug=true)` | Returns ExtendScript error line number, fileName, and stack trace on failure. |
-| **Timeout / maxResults** | Added to `text_getStories`, `text_getTextFrames`, `text_getContent` | Custom timeout and result limit for large documents. |
-| **BOM filtering** | Added to text reads | Filters `\ufeff` (BOM) and `\u0004` (InDesign internal) by default. Use `includeControlChars: true` to get raw content. |
-| **MCP resources** | `mcp://tools/inventory`, `mcp://document/active` | Agent auto-discovery, session tracking. |
+<p align="center">
+  <a href="https://www.npmjs.com/package/indesign-nutria-mcp"><img src="https://img.shields.io/npm/v/indesign-nutria-mcp?style=flat&logo=npm&label=version&color=7c3aed" alt="npm version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-7c3aed?style=flat" alt="license"></a>
+  <a href="#"><img src="https://img.shields.io/badge/tools-183-7c3aed?style=flat" alt="tools"></a>
+  <a href="#"><img src="https://img.shields.io/badge/tests-747-22c55e?style=flat" alt="tests"></a>
+  <a href="#"><img src="https://github.com/nutriandrea/adobe-indesign-mcp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat&logo=node.js" alt="node"></a>
+  <a href="https://www.adobe.com/products/indesign.html"><img src="https://img.shields.io/badge/InDesign-2022%2B-007396?style=flat&logo=adobe" alt="indesign"></a>
+</p>
 
 ---
 
-## 🚀 Quick start
+## 🚀 Why This Exists
 
-### Prerequisites
+**InDesign automation has been broken for 20 years.** ExtendScript is ancient. CEP panels are over-engineered. UXP scripting requires a CS degree. You just want AI to do the layout.
 
-- Node.js ≥ 18
-- Adobe InDesign 2022 or later
-- [UXP Developer Tool](https://developer.adobe.com/uxp/) (once, to load the plugin)
+This MCP server fixes that. One `npm install` and your AI agent controls InDesign like a puppeteer.
 
-### Install
+### 🆚 MCP vs The Old Ways
+
+| | **MCP (this)** | **ExtendScript** | **CEP Panels** | **UXP Scripts** | **Manual** |
+|---|---|---|---|---|---|
+| **Learn in** | 30 seconds | 3 weeks | 2 months | 1 month | 0 (slow) |
+| **AI-native** | ✅ Any MCP agent | ❌ | ❌ | ❌ | ❌ |
+| **Tool count** | **183** | Unlimited (you write them) | 5-20 typical | 5-20 typical | ∞ (manual) |
+| **Error messages** | Human-readable | Opaque crashes | Varies | Better | N/A |
+| **Setup time** | 5 minutes | 10 minutes | 2 hours | 30 minutes | Instant |
+| **Undo support** | ✅ Built-in | ❌ | Varies | ❌ | ✅ |
+| **Search text** | `text_search("pattern")` | Write 50 lines | Maybe | Maybe | Ctrl+F |
+| **Debug mode** | ✅ Stack traces | ❌ | Varies | Limited | N/A |
+| **Remote control** | ✅ Anywhere STDIO works | ❌ InDesign-only | ❌ | ❌ | N/A |
+| **Maintenance** | Zero (we handle 183 tools) | You write+test everything | Fragile | Fragile | N/A |
+
+---
+
+## ✨ What It Can Do
+
+### 📝 Text & Typography (27 tools)
+Create frames, set content, apply paragraph/character styles, control formatting, search with GREP, find/replace, apply fonts, set columns, insets, auto-size, vertical justification, drop caps, keep options, hyphenation, tabs, paragraph rules, text wrap, baseline, linking/unlinking.
+
+### 🎨 Shapes & Objects (20 tools)
+Rectangles, ellipses, polygons, lines, groups, anchored objects — create, modify, delete, list, arrange.
+
+### 🖼️ Images (5 tools)
+Place from disk, query metadata, fit/proportional, adjust brightness/contrast, relink.
+
+### 🎭 Colors & Swatches (6 tools)
+CMYK/RGB/LAB/spot swatches, ink list, gradients, apply to fill/stroke.
+
+### 📄 Pages & Documents (15 tools)
+Create, open, save, close, getInfo, listOpen — plus page add/delete/duplicate/move/getInfo/listAll/applyMaster, sections.
+
+### 📊 Tables (20 tools)
+Create, set cells, add/delete rows/columns, merge/split, alignment, fills, strokes, insets, header/footer, row/column sizing, table styles, cell styles.
+
+### 🧬 Styles (10 tools)
+Paragraph, character, object styles — create, list, duplicate, delete, apply.
+
+### 🏗️ Masters & Books (10 tools)
+Master spreads — create, duplicate, apply, delete, list, getPages. Books — list, open, getDocuments, synchronize.
+
+### 📤 Export (9 tools)
+PDF, EPUB, HTML, JPG, PNG, package — plus preflight, font/swatch/table lists, and `script_run()` for custom ExtendScript.
+
+### 🔍 Find & Replace (5 tools)
+GREP find/replace, format-aware find/replace.
+
+### 🔄 Transform (5 tools)
+Align, distribute, rotate, scale, flip.
+
+### 🔗 Interactive (5 tools)
+Hyperlinks, buttons, cross-reference anchors.
+
+### 📚 References (10 tools)
+Footnotes, endnotes, cross-references, index entries/topics/generation.
+
+### 📋 Lists (6 tools)
+Define, apply to paragraph/selection, remove, restart numbering.
+
+### 🧩 XML & Data Merge (11 tools)
+XML tags, import/export, data merge with CSV/TSV/XML sources.
+
+### 🔧 Other
+Layers, effects (drop shadow, feather, transparency), TOC, sections, undo/redo, undo groups.
+
+---
+
+## 🧠 Included AI Skills
+
+Ten skills ship with the repo, auto-loaded by trigger keywords when you use any AI agent:
+
+| # | Skill | What it does for you |
+|---|---|---|
+| 1 | **Aesthetic Preference** | Asks 8 questions before any creative work — font, palette, style, margins. Builds a persistent JSON profile. |
+| 2 | **Layout Readability** | Validates overlays, contrast, orphans/widows, hierarchy, spacing, overflow before delivery. |
+| 3 | **Export & Verify** | Mandatory modify → export JPG → analyze pixels → fix → repeat cycle. |
+| 4 | **Import Word** | Imports `.docx`, maps Word styles to InDesign paragraph styles. |
+| 5 | **Batch Operations** | Applies the same modification across N pages. |
+| 6 | **Image Optimize** | Place, resize, DPI check, relink. Profiles for print (300dpi CMYK) vs web (72dpi RGB). |
+| 7 | **Table Format** | Creates and styles tables — columns, rows, borders, fills, merge cells. |
+| 8 | **Template Manager** | Save/load reusable page templates. |
+| 9 | **Export Batch** | Export same document to multiple formats at once with different profiles. |
+| 10 | **Style Extractor** | Scans `.indd` files, extracts full style profile (fonts, colors, styles, masters, margins) as JSON, replicates on new layout. |
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────┐       STDIO        ┌──────────────────────┐     WebSocket     ┌──────────────────┐
+│  Any AI Agent       │ ◄────────────────► │  indesign-nutria-mcp │ ◄───────────────► │  Adobe InDesign   │
+│  (Claude, OpenCode, │                    │  (Node.js MCP Server) │     port 8120     │  + UXP Plugin     │
+│   Cursor, etc.)     │                    │  31 handlers         │                    │  + ExtendScript    │
+└─────────────────────┘                    │  183 tools           │                    └──────────────────┘
+                                           │  10 AI skills        │
+                                           └──────────────────────┘
+```
+
+### Full Handler Catalog
+
+| Handler | Tools | Key Features |
+|---------|-------|-------------|
+| **AnchoredObject** | 5 | create, getSettings, release, setPosition, setProperties |
+| **Book** | 4 | list, open, getDocuments, synchronize |
+| **Color** | 6 | swatch CRUD, inks, gradients, apply |
+| **DataMerge** | 5 | selectDataSource, listFields, mergeRecords, export, removeDataSource |
+| **Document** | **8** | create/open/save/close, getInfo, listOpen, **getPageStories, getStoryPages** |
+| **Effect** | 4 | drop shadow, feather, transparency, gradient feather |
+| **Export** | **9** | multi-format export, preflight, fonts/swatches/tables, **script_run** |
+| **Font** | 5 | list, find, change, missing check, glyph insert |
+| **Grep** | 4 | find, replace, findFormat, replaceFormat |
+| **Image** | 5 | place, info, adjust, fit, relink |
+| **Index** | 4 | addEntry, createTopic, generate, listTopics |
+| **Interactive** | 5 | hyperlinks, buttons, anchors |
+| **Layer** | 5 | create, delete, list, reorder, setProperties |
+| **List** | 6 | define, apply, remove, restart numbering |
+| **Master** | 6 | create, duplicate, apply, delete, list, getPages |
+| **Note** | 4 | footnotes, endnotes |
+| **Object** | 6 | shapes, groups, image links |
+| **Page** | 7 | add, delete, duplicate, move, getInfo, listAll, applyMaster |
+| **Resources** | 6 | list/update/embed/unembed links |
+| **Section** | 4 | create, list, setNumbering, delete |
+| **Shape** | 6 | rectangle/ellipse/line/polygon create, delete, modify |
+| **Style** | 7 | paragraph/character/object styles CRUD |
+| **Table** | 16 | create, cells, rows/columns, merge/split, alignment, fills, strokes, header/footer |
+| **TableStyle** | 4 | tableStyle, cellStyle CRUD |
+| **Text** | 7 | frames, content, stories, findReplace, **BOM filtering, timeout** |
+| **TextAdvanced** | **20** | columns, wrap, links, drop caps, rules, tabs, **formatting read/write, search** |
+| **Toc** | 4 | createStyle, generate, update, listStyles |
+| **Transform** | 5 | align, distribute, rotate, scale, flip |
+| **Undo** | **5** | undo, redo, history, **beginGroup, endGroup** |
+| **Xml** | 6 | tags CRUD, tag/untag items, import/export |
+| **Xref** | 3 | create, list, updateFormat |
+
+### MCP Resources
+
+| URI | What it gives you |
+|---|---|
+| `mcp://session/status` | Active document session state |
+| `mcp://bridge/status` | WebSocket bridge health + queue depth |
+| `mcp://tools/inventory` | Full 183-tool catalog for agent self-discovery |
+| `mcp://document/active` | Currently active document info |
+
+---
+
+## 🎯 Use Cases
+
+### 🏢 Agency Production
+> "Create a 200-page catalog from this CSV. Product name in 14pt Arial Bold, price in 12pt Arial Regular, description in 10pt. Add a red 'SALE' badge on page 1, 50, 100, 150. Export as PDF."
+
+### 📚 Book Publishing
+> "Import this Word document. Map Heading 1 to 'Chapter Title' style, Normal to 'Body Text'. Add running headers with page numbers. Generate a TOC. Export to PDF with crop marks."
+
+### 🎨 Creative Automation
+> "Take this InDesign template and generate 50 variations with different colors and text from this spreadsheet. Export each as a separate PDF."
+
+### 🏭 Print Production
+> "Check all 200 files for missing fonts and broken links. Fix them. Export as PDF/X-1a."
+
+### 🔄 Continuous Publishing
+> "Every morning at 8am, update the daily newspaper template with fresh content from our CMS, preflight, and upload to the web server."
+
+---
+
+## ⚡ Quick Start (30 seconds)
+
+```bash
+npm install -g indesign-nutria-mcp
+indesign-nutria-mcp
+```
+
+Or from source:
 
 ```bash
 git clone https://github.com/nutriandrea/adobe-indesign-mcp
-cd indesign-nutria-mcp
+cd adobe-indesign-mcp
 npm install
 npm run build
+node dist/index.js
 ```
 
-### 1. Start the server
+### 1️⃣ Load the plugin in InDesign
+1. Open **UXP Developer Tool**
+2. Load `plugin/` directory
+3. Click **MCP Bridge → Connect**
 
-```bash
-node dist/index.js opencode-indesign.json
-```
+### 2️⃣ Connect your AI agent
 
-### 2. Open InDesign + load the plugin
-
-1. Launch **Adobe InDesign**
-2. Open **UXP Developer Tool**
-3. Load the `plugin/` directory
-4. Click the **•••** menu → **MCP Bridge**
-5. Click **Connect** (default: `ws://localhost:8120`)
-
-### 3. Connect your AI
-
-Configure your MCP client with:
-
+**OpenCode:**
 ```json
 {
   "mcpServers": {
@@ -82,225 +230,123 @@ Configure your MCP client with:
 }
 ```
 
-Now you can say things like:
+**Claude Desktop:**
+```json
+{
+  "mcpServers": {
+    "indesign": {
+      "command": "node",
+      "args": ["/path/to/indesign-nutria-mcp/dist/index.js"]
+    }
+  }
+}
+```
 
-> *"Create an A4 document with 5 pages. Add a red circle on page 3 and the text 'Hello' in Arial Bold 24pt."*
+### 3️⃣ Start creating
 
-> *"Check what font is used in the first paragraph of story 0."*
-
-> *"Find all text in Bold in the document."*
+```
+🤖 "Create a landscape A3 document with 3 pages."
+🤖 "Add a blue rectangle covering the top half of page 1."
+🤖 "In the rectangle, add text 'Hello World' in white, Arial Bold 72pt."
+🤖 "Export page 1 as JPG."
+```
 
 ---
 
-## 🛠️ New declarative tools
+## 🆕 What's New in v1.1.0
 
-### Text formatting (read)
-
-```typescript
-text_getFormatting(storyIndex, paragraphIndex)
-// Returns: [{ start, end, font, fontStyle, pointSize, characterStyle, fillColor, capitalization, tracking, ... }]
-```
-
-No more writing custom ExtendScript just to check what font or style is applied. Each text style range is returned with full formatting properties, using paragraph-relative character indices.
-
-### Text formatting (write)
-
-```typescript
-text_applyCharStyle(storyIndex, paragraphIndex, startChar, endChar, styleName)
-text_applyFont(storyIndex, paragraphIndex, startChar, endChar, fontFamily?, fontStyle?, pointSize?)
-```
-
-Apply character styles or font changes to a range within a paragraph in a single tool call. Uses `itemByRange` internally — no manual index math.
-
-### Search
-
-```typescript
-text_search(storyIndex, pattern, maxResults?, timeout?)
-// Returns: { totalFound, matches: [{ paragraphIndex, charStart, charEnd, text }] }
-
-text_searchFormatting(storyIndex, fontFamily?, fontStyle?, pointSize?, maxResults?, timeout?)
-// Returns: { totalFound, matches: [{ paragraphIndex, charStart, charEnd, text }] }
-```
-
-GREP-powered text search and format-aware search. Returns paragraph-relative character positions so you can immediately pipe results into `text_applyCharStyle` or `text_applyFont`.
-
-### Document navigation
-
-```typescript
-document_getPageStories(pageIndex)
-// Returns: [{ storyIndex, length, textFrames, textFrameIndices, contentPreview }]
-
-document_getStoryPages(storyIndex)
-// Returns: [{ pageIndex, pageName }]
-```
-
-Map stories to pages and vice versa. Essential for understanding document layout without manual exploration.
-
-### Safety
-
-```typescript
-undo_beginGroup()  // All subsequent tool calls become a single undo step
-undo_endGroup()    // Restore normal undo granularity
-```
-
-### Debug
-
-```typescript
-script_run(code, debug: true, timeout?)
-```
-
-When `debug: true`, ExtendScript errors include line number, fileName, and full stack trace. No more opaque "Script execution failed" messages.
-
-### BOM filtering
-
-All text-reading tools (`text_getContent`, `text_getStories`, `text_getTextFrames`, `text_getFormatting`) filter `\ufeff` (BOM) and `\u0004` (InDesign internal control char) by default. Pass `includeControlChars: true` to get raw content.
-
-### Timeout / maxResults
-
-`text_getStories`, `text_getTextFrames`, `text_search`, `text_searchFormatting` accept optional `timeout` (ms) and `maxResults` params. Default timeout is 30s; increase for large documents.
+| Feature | Tools | What it solves |
+|---------|-------|----------------|
+| **Text formatting read** | `text_getFormatting` | Get font/size/style per text range. No more custom scripts. |
+| **Character style apply** | `text_applyCharStyle` | Apply to a range in one call. |
+| **Font apply** | `text_applyFont` | Apply font family/style/size to a range. |
+| **Text search** | `text_search`, `text_searchFormatting` | GREP + format-aware search with paragraph-relative positions. |
+| **Story→Page map** | `document_getPageStories`, `document_getStoryPages` | Which stories are on which pages. |
+| **Undo groups** | `undo_beginGroup`, `undo_endGroup` | Group operations into one undo step. |
+| **Debug mode** | `script_run(code, debug=true)` | Full ExtendScript stack traces. |
+| **BOM filtering** | Text reads | `\ufeff` and `\u0004` filtered by default. |
+| **Timeout/maxResults** | `text_getStories`, etc. | Custom limits for large documents. |
+| **MCP resources** | `mcp://tools/inventory` | Agent auto-discovers all tools. |
 
 ---
 
-## 🧠 AI Skills (`.opencode/skills/`)
-
-Ten skills ship with this repo. They are **auto-loaded by trigger keywords** when you talk to the AI agent:
-
-| # | Skill | Purpose |
-|---|-------|---------|
-| 1 | **Aesthetic Preference** | 8 questions before any creative work — font, palette, style, margins, constraints. Builds a persistent JSON profile. |
-| 2 | **Layout Readability** | Validates overlays, contrast, orphans/widows, hierarchy, spacing, overflow before delivery. |
-| 3 | **Export & Verify** | Mandatory **modify → export JPG → analyze pixels → fix → repeat** cycle. |
-| 4 | **Import Word** | Imports `.docx`, maps Word styles (Heading 1/Normal/List) to InDesign paragraph styles. |
-| 5 | **Batch Operations** | Applies the same modification across N pages (bulk text, master apply, export all). |
-| 6 | **Image Optimize** | Place, resize, DPI check, relink images. Profiles for print (300dpi CMYK) vs web (72dpi RGB). |
-| 7 | **Table Format** | Creates and styles tables — columns, rows, borders, fills, text alignment, merge cells. |
-| 8 | **Template Manager** | Save/load reusable page templates as `.indd` files or `.indt` library. |
-| 9 | **Export Batch** | Exports the same document to **multiple formats at once** (PDF + JPG + PNG), each with its own profile. |
-| 10 | **Style Extractor** | Scans a folder of `.indd` files, **extracts full style profile** (fonts, colors, paragraph/character styles, master spreads, margins), saves as JSON, then replicates it on a new book layout. |
-
----
-
-## 🏗️ Architecture
-
-```
-┌────────────────┐     STDIO      ┌──────────────────┐    WebSocket     ┌──────────────┐
-│   AI Agent     │ ◄──────────►   │  MCP Server      │ ◄─────────────► │  InDesign    │
-│  (OpenCode,    │                │  (node)           │    port 8120    │  + UXP plugin│
-│   Claude, ...) │                │                   │                 │              │
-└────────────────┘                └──────────────────┘                 └──────────────┘
-                                          │
-                                     ┌─────┴─────┐
-                                     │ 31 handlers│
-                                     │ 183 tools  │
-                                     └───────────┘
-```
-
-### MCP Resources
-
-| Resource URI | Description |
-|---|---|
-| `mcp://session/status` | Active document session state |
-| `mcp://bridge/status` | WebSocket bridge connection status + queue depth |
-| `mcp://tools/inventory` | Full list of all 183 tools with descriptions (agent auto-discovery) |
-| `mcp://document/active` | Currently active document info |
-
-### Handlers at a glance
-
-| Handler | Tools | Notable |
-|---------|-------|---------|
-| **AnchoredObject** | 5 | create, getSettings, release, setPosition, setProperties |
-| **Book** | 4 | list, open, getDocuments, synchronize |
-| **Color** | 6 | swatch list/create/delete, ink list, gradient create, apply |
-| **DataMerge** | 5 | selectDataSource, listFields, mergeRecords, export, removeDataSource |
-| **Document** | **8** | create/open/save/close, getInfo, listOpen, **getPageStories, getStoryPages** |
-| **Effect** | 4 | drop shadow, feather, transparency, gradient feather |
-| **Export** | **9** | export (PDF/EPUB/HTML/JPG/PNG/package), preflight, fonts/swatches/tables, **script_run** |
-| **Font** | 5 | list, find, change, missing check, glyph insert |
-| **Grep** | 4 | find, replace, findFormat, replaceFormat |
-| **Image** | 5 | place, info, adjust, fit, relink |
-| **Index** | 4 | addEntry, createTopic, generate, listTopics |
-| **Interactive** | 5 | list/add/delete hyperlinks, list buttons, list anchors |
-| **Layer** | 5 | create, list, setProperties, reorder, delete |
-| **List** | 6 | define, list, applyToParagraph/Selection, removeFromParagraph, restartNumbering |
-| **Master** | 6 | create, duplicate, apply, delete, list, getPages |
-| **Note** | 4 | addFootnote/Endnote, listFootnotes, footnoteOptions |
-| **Object** | 6 | shape list/create, group list/ungroup, image getLinks/list |
-| **Page** | 7 | add, delete, duplicate, move, getInfo, listAll, applyMaster |
-| **Resources** | 6 | list/update/embed/unembed links, getLinkInfo |
-| **Section** | 4 | create, list, setNumbering, delete |
-| **Shape** | 6 | rectangle/ellipse/line/polygon create, delete, modify |
-| **Style** | 7 | list/create paragraph/character/object styles, duplicate, delete |
-| **Table** | 16 | create, setCell, addRow/Column, deleteRow/Column, merge/split cells, getInfo/list, header/footer, alignment, fills, strokes |
-| **TableStyle** | 4 | tableStyle create/list, cellStyle create/list |
-| **Text** | 7 | addFrame, setContent, **getContent (BOM filter, timeout)**, getTextFrames, **getStories (maxResults, timeout)**, findReplace, applyParagraphStyle |
-| **TextAdvanced** | **20** | link/unlink frames, columns, wrap, drop caps, keep opts, inset, auto-size, vert just, baseline, rules, tabs, hyphenation, **getFormatting, applyCharStyle, applyFont, search, searchFormatting** |
-| **Toc** | 4 | createStyle, generate, listStyles, update |
-| **Transform** | 5 | align, distribute, rotate, scale, flip |
-| **Undo** | **5** | undo, redo, history, **beginGroup, endGroup** |
-| **Xml** | 6 | listTags, addTag, deleteTag, tagPageItem, export, import |
-| **Xref** | 3 | create, list, updateFormat |
-
----
-
-## 📁 Project structure
+## 📦 Project Structure
 
 ```
 ├── src/
 │   ├── server/          # MCP server (STDIO transport)
-│   ├── bridge/          # WebSocket bridge + ExtendScript executor
+│   ├── bridge/          # WebSocket bridge + ScriptExecutor
 │   ├── handlers/        # 31 handler modules (183 tools)
-│   ├── schemas/         # Zod schemas for tool parameters
+│   ├── schemas/         # Zod parameter schemas
 │   ├── core/            # Session tracking
 │   ├── types/           # TypeScript definitions
-│   └── utils/           # Config loader, logger, JSON polyfill, security
-├── plugin/              # UXP panel source (index.html, index.js, manifest.json)
+│   └── utils/           # Config, logger, security, JSON polyfill
+├── plugin/              # UXP panel (index.html, index.js, manifest.json)
 ├── tests/               # 747+ tests (vitest)
 ├── .opencode/skills/    # 10 AI agent skills
-├── .sisyphus/context/   # Persistent aesthetic profile storage
-├── dist/                # Compiled JavaScript
-├── opencode.json        # OpenCode MCP configuration
-└── bridge-proxy.mjs     # Alternative WebSocket→JXA bridge (fallback)
-```
-
----
-
-## 🧪 Testing
-
-```bash
-# All tests (unit + integration)
-npm test
-
-# Watch mode
-npm run test:watch
-
-# Build
-npm run build
-
-# Lint
-npm run lint
+├── media/               # Social preview, hero images
+├── docs/                # Documentation
+├── dist/                # Compiled output
+└── opencode.json        # MCP configuration
 ```
 
 ---
 
 ## 📋 Requirements
 
-- **Adobe InDesign** 2022 or later (2024/2025/2026 recommended)
-- **macOS** (Windows support via CEP planned)
-- **Node.js** 18+
+| Requirement | Version |
+|-------------|---------|
+| **Adobe InDesign** | 2022+ (2024/2025/2026 recommended) |
+| **Node.js** | 18+ |
+| **OS** | macOS (Windows via CEP planned) |
+
+---
+
+## 🧪 Development
+
+```bash
+npm test           # Run 747 tests
+npm run test:watch # Watch mode
+npm run build      # TypeScript compile
+npm run lint       # ESLint
+```
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] **Windows CEP support** — bridge via CEP panel
+- [ ] **InDesign Server** — headless server support for CI/CD pipelines
+- [ ] **Live preview** — stream InDesign canvas to agent
+- [ ] **Template marketplace** — share and discover InDesign templates
+- [ ] **Natural language → layout** — describe a page, get a page
+- [ ] **Batch PDF processing** — apply changes across hundreds of files
+- [ ] **VSCode extension** — control InDesign from your editor
 
 ---
 
 ## 🤝 Contributing
 
-PRs welcome. The handler pattern is straightforward:
+PRs welcome! The handler pattern is designed to be simple:
 
 1. Create `src/handlers/YourHandler.ts`
-2. Implement tools with Zod parameter schemas
+2. Define tools with Zod schemas
 3. Register in `IndesignMcpServer.ts`
-4. Add tests in `tests/`
+4. Add tests
+
+Check [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ---
 
 ## 📄 License
 
-MIT
+MIT © Andrea Cacioppo
+
+---
+
+<p align="center">
+  <b>Made with ❤️ for designers who code and AI agents who design.</b><br>
+  <a href="https://github.com/nutriandrea/adobe-indesign-mcp">GitHub</a> ·
+  <a href="https://www.npmjs.com/package/indesign-nutria-mcp">npm</a> ·
+  <a href="https://github.com/nutriandrea/adobe-indesign-mcp/issues">Issues</a>
+</p>
