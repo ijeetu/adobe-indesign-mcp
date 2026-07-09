@@ -11,6 +11,14 @@
 </p>
 
 <p align="center">
+  <a href="media/demo.mp4">
+    <img src="media/social-preview.png" width="600" alt="Demo video" style="border-radius: 12px; border: 1px solid #312e81;">
+  </a>
+  <br>
+  <sub>⚡ Click for a quick demo · <a href="https://github.com/nutriandrea/adobe-indesign-mcp/releases/tag/v1.1.0">v1.1.0 release</a></sub>
+</p>
+
+<p align="center">
   <a href="https://www.npmjs.com/package/indesign-nutria-mcp"><img src="https://img.shields.io/npm/v/indesign-nutria-mcp?style=flat&logo=npm&label=version&color=7c3aed" alt="npm version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-7c3aed?style=flat" alt="license"></a>
   <a href="#"><img src="https://img.shields.io/badge/tools-183-7c3aed?style=flat" alt="tools"></a>
