@@ -224,10 +224,16 @@
       if (ws && ws.readyState === WebSocket.OPEN) {
         disconnect();
       } else {
-        const url = serverUrlInput.value.trim() || 'ws://localhost:3001';
+        const url = serverUrlInput.value.trim() || 'ws://localhost:8120';
         connect(url);
       }
     });
+
+    // Auto-connect as soon as the panel is opened — no manual Connect click needed.
+    // The existing reconnect logic in connect()/ws.onclose keeps retrying if the
+    // bridge server isn't up yet.
+    const initialUrl = serverUrlInput.value.trim() || 'ws://localhost:8120';
+    connect(initialUrl);
   }
 
   // UXP panels fire DOMContentLoaded on initial load
