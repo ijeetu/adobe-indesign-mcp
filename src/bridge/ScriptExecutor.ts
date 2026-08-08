@@ -54,12 +54,12 @@ ${wrapped}
 app.scriptPreferences.undoMode = UndoModes.FAST_ENTIRE_SCRIPT;`;
     }
 
-    const fullCode = polyfilled + '\n' + wrapped;
-    const sanitized = sanitizeCode(fullCode);
+    const sanitizedUserCode = sanitizeCode(wrapped);
+    const fullCode = polyfilled + '\n' + sanitizedUserCode;
     const id = uuidv4();
     const request: BridgeRequest = {
       id,
-      code: sanitized,
+      code: fullCode,
       timeout: timeout ?? this.defaultTimeout,
     };
 
